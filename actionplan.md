@@ -121,9 +121,189 @@ flowchart TD
 - `GET /api/v1/reports/{id}` — Get report summary
 - `GET /api/v1/reports/{id}/details` — Get full report details
 
+### Phase 8: Dashboard Metrics & Agent Completion ✔️
+
+| Feature | Status | Files |
+|---------|--------|-------|
+| **In-Depth Analyzer** | ✅ Complete | `backend/app/services/agents/in_depth_analyzer.py` |
+| **Summary Creator** | ✅ Complete | `backend/app/services/agents/summary_creator.py` |
+| **Comparison Creator** | ✅ Complete | `backend/app/services/agents/comparison_creator.py` |
+| **Metric Model** | ✅ Complete | `Metric`, `MetricStatus` in `report.py` |
+| **Compare Endpoint** | ✅ Complete | `GET /api/v1/reports/compare/` |
+| **Dashboard Summary API** | ✅ Complete | `GET /api/v1/reports/dashboard/summary` |
+| **Health Overview UI** | ✅ Complete | Flagged/Normal counts in dashboard |
+| **Flagged Metrics Panel** | ✅ Complete | Table with status badges |
+| **Compare Modal** | ✅ Complete | Side-by-side report comparison |
+
+**Full Analysis Pipeline:**
+```
+Upload → Document Analyzer → Initial Screener → In-Depth Analyzer → Summary Creator
+```
+
 ---
 
-##  Development Workflow
+## 🔮 Remaining Features (To Be Built)
+
+### Phase 9: Ask Away — RAG-Based Q&A
+
+**Goal:** Allow users to ask questions about their reports in natural language.
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Text Indexing** | High | Store report text with MongoDB text indexes |
+| **Ask Away Agent** | High | Process user questions, retrieve context |
+| **Chat API** | High | `POST /api/v1/chat/ask` endpoint |
+| **Chat UI** | High | Chat interface in dashboard |
+| **Conversation History** | Medium | Store past Q&A for context |
+
+**Backend Implementation:**
+```python
+# backend/app/services/agents/ask_away.py
+class AskAwayAgent(BaseAgent):
+    """RAG-based Q&A agent for report queries."""
+    
+    async def process(self, input_data):
+        # 1. Retrieve relevant report sections using text search
+        # 2. Build context from extracted_text and metrics
+        # 3. Generate answer using LLM with context
+        # 4. Return answer with source references
+```
+
+**Required Files:**
+- `backend/app/services/agents/ask_away.py` — Agent implementation
+- `backend/app/routers/chat.py` — Chat API endpoints
+- `backend/app/models/chat.py` — ChatMessage model
+- `frontend/src/components/ChatInterface.jsx` — Chat UI component
+
+---
+
+### Phase 10: Report Formatter — PDF Export
+
+**Goal:** Generate downloadable PDF reports with analysis results.
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **PDF Template** | High | Design clean report layout |
+| **Report Generator** | High | Generate PDF from analysis data |
+| **Download API** | High | `GET /api/v1/reports/{id}/export` |
+| **Download Button** | Medium | Add to report details view |
+| **Email Report** | Low | Optional email delivery |
+
+**Backend Implementation:**
+```python
+# Using reportlab or weasyprint
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table
+
+async def generate_pdf_report(report: Report) -> bytes:
+    # 1. Create PDF document
+    # 2. Add header with patient info
+    # 3. Add health summary section
+    # 4. Add flagged metrics table
+    # 5. Add recommendations
+    # 6. Return PDF bytes
+```
+
+**Required Files:**
+- `backend/app/services/pdf_generator.py` — PDF generation logic
+- `backend/app/routers/reports.py` — Add export endpoint
+- New dependency: `reportlab` or `weasyprint`
+
+---
+
+### Phase 11: Health Trends — Historical Tracking
+
+**Goal:** Track and visualize health metrics over time.
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Metric History API** | High | `GET /api/v1/metrics/history?name=...` |
+| **Trend Calculation** | High | Calculate improvement/decline |
+| **Charts Component** | High | Line charts for metric trends |
+| **Trend Summary** | Medium | AI-generated trend insights |
+| **Alerts** | Medium | Notify on significant changes |
+
+**Frontend Implementation:**
+```jsx
+// Using recharts or chart.js
+import { LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+
+function MetricTrendChart({ metricName, data }) {
+    return (
+        <LineChart data={data}>
+            <XAxis dataKey="date" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="value" stroke="#667eea" />
+        </LineChart>
+    );
+}
+```
+
+**Required Files:**
+- `backend/app/routers/metrics.py` — Metrics history API
+- `frontend/src/components/TrendChart.jsx` — Chart component
+- `frontend/src/pages/HealthTrends.jsx` — Trends page
+- New dependency (frontend): `recharts`
+
+---
+
+### Phase 12: Production & Polish
+
+**Goal:** Prepare application for production deployment.
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| **Error Handling** | High | Global error boundaries, API error responses |
+| **Loading States** | High | Skeleton loaders, spinners |
+| **Input Validation** | High | Form validation, sanitization |
+| **Rate Limiting** | High | Protect API from abuse |
+| **Logging** | High | Structured logging with correlation IDs |
+| **Health Checks** | Medium | `/health` and `/ready` endpoints |
+| **Docker Setup** | Medium | Dockerfile, docker-compose |
+| **CI/CD** | Medium | GitHub Actions for testing/deployment |
+| **SSL/HTTPS** | High | Certificate configuration |
+| **Environment Config** | High | Separate dev/staging/prod configs |
+
+**Security Checklist:**
+- [ ] HTTPS everywhere
+- [ ] Secure cookie settings
+- [ ] CORS properly configured
+- [ ] Rate limiting enabled
+- [ ] Input sanitization
+- [ ] SQL/NoSQL injection prevention
+- [ ] XSS protection
+- [ ] CSRF tokens (if needed)
+
+**Deployment Options:**
+1. **Docker + AWS/GCP** — Containerized deployment
+2. **Vercel (Frontend) + Railway (Backend)** — Managed platforms
+3. **DigitalOcean App Platform** — Simple PaaS option
+
+---
+
+## 📊 Progress Summary
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 1 | Foundation | ✅ Complete |
+| 2 | Authentication | ✅ Complete |
+| 3 | Frontend Foundation | ✅ Complete |
+| 4 | Dashboards | ✅ Complete |
+| 5 | File Upload | ✅ Complete |
+| 6 | LLM Infrastructure | ✅ Complete |
+| 7 | Upload API & Pipeline | ✅ Complete |
+| 8 | Dashboard Metrics | ✅ Complete |
+| 9 | Ask Away (RAG Q&A) | ⏳ To Do |
+| 10 | Report Formatter | ⏳ To Do |
+| 11 | Health Trends | ⏳ To Do |
+| 12 | Production & Polish | ⏳ To Do |
+
+**Estimated Completion:** ~70% of core features done
+
+---
+
+## 🛠️ Development Workflow
 
 > **MANDATORY STEPS** — Follow this process for every new feature.
 
