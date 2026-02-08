@@ -2,7 +2,7 @@ from typing import Optional, Annotated, List
 from enum import Enum
 from beanie import Document, Indexed
 from pydantic import BaseModel, EmailStr, Field
-from datetime import datetime
+from datetime import datetime, date
 
 
 class UserRole(str, Enum):
@@ -20,7 +20,7 @@ class User(Document):
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
     # Patient-specific fields
-    dob: Optional[datetime] = None
+    dob: Optional[date] = None
     sex: Optional[str] = None
 
     class Settings:
@@ -33,7 +33,7 @@ class UserCreate(BaseModel):
     password: str
     role: UserRole = UserRole.PATIENT
     full_name: Optional[str] = None
-    dob: Optional[datetime] = None
+    dob: Optional[date] = None
     sex: Optional[str] = None
 
 

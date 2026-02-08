@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # OpenRouter LLM Configuration
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
+    
+    # Model configurations per agent (using free models)
+    LLM_MODEL_VISION: str = "google/gemini-2.0-flash-exp:free"  # For Document Analyzer
+    LLM_MODEL_REASONING: str = "google/gemini-2.0-flash-exp:free"  # For In-Depth Analyzer
+    LLM_MODEL_FAST: str = "meta-llama/llama-3.1-8b-instruct:free"  # For Screener, Summary, etc.
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,
