@@ -1,0 +1,134 @@
+{
+  "_id": "69abebd8fe8018dbfff1477d",
+  "user_id": "69abe04b067a3eedc9464bf4",
+  "file_name": "cbc-1.pdf",
+  "file_url": "uploads\\d4ba8eb9-759a-45ba-bfce-955129b225ac.pdf",
+  "report_type": "CBC",
+  "status": "analyzed",
+  "current_step": "Finalizing summary...",
+  "extracted_text": "DRLOGY PATHOLOGY LAB\n0123456789 | 0912345678\ndrlogypathlab@drlogy.com\nAccurate | Caring | Instant\n105 -108, SMART VISION COMPLEX, HEALTHCARE ROAD, OPPOSITE HEALTHCARE COMPLEX. MUMBAI - 689578\nwww.drlogy.com\nYash M. Patel Sample Collected At:\nAge : 21 Years 125, Shivam Bungalow, S G Road,\nRegistered on: 02:31 PM 02 Dec, 2X\nMumbai\nSex : Male\nCollected on: 03:11 PM 02 Dec, 2X\nPID : 555 Ref. By: Dr. Hiren Shah Reported on: 04:35 PM 02 Dec, 2X\nComplete Blood Count (CBC)\nInvestigation Result Reference Value Unit\nPrimary Sample Type : Blood\nHEMOGLOBIN\nHemoglobin (Hb) 12.5 Low 13.0 - 17.0 g/dL\nRBC COUNT\nTotal RBC count 5.2 4.5 - 5.5 mill/cumm\nBLOOD INDICES\nPacked Cell Volume (PCV) 57.5 High 40 - 50 %\nMean Corpuscular Volume (MCV) 87.75 83 - 101 fL\nCalculated\nMCH 27.2 27 - 32 pg\nCalculated\nMCHC 32.8 32.5 - 34.5 g/dL\nCalculated\nRDW 13.6 11.6 - 14.0 %\nSmart Pathology Laboratory\nWBC COUNT\nTotal WBC count 9000 4000-11000 cumm\nDIFFERENTIAL WBC COUNT\nDrlogy.com\nNeutrophils 60 50 - 62 %\nLymphocytes 31 20 - 40 %\nEosinophils 1 00 - 06 %\nMonocytes 7 00 - 10 %\nBasophils 1 00 - 02 %\nPLATELET COUNT\nPlatelet Count 150000 Borderline 150000 - 410000 cumm\nInstruments: Fully automated cell counter - Mindray 300\nInterpretation: Further confirm for Anemia\nThanks for Reference ****End of Report****\nMedical Lab Technician Dr. Payal Shah Dr. Vimal Shah\n(DMLT, BMLT) (MD, Pathologist) (MD, Pathologist)\nGenerated on : 02 Dec, 202X 05:00 PM Page 1 of 1\nSample Collection 0123456789",
+  "markers": [
+    {
+      "name": "Hemoglobin",
+      "value": 12.5,
+      "unit": "g/dL",
+      "reference_min": 13.0,
+      "reference_max": 17.0,
+      "status": "low"
+    },
+    {
+      "name": "RBC Count",
+      "value": 5.2,
+      "unit": "mill/cumm",
+      "reference_min": 4.5,
+      "reference_max": 5.5,
+      "status": "normal"
+    },
+    {
+      "name": "Packed Cell Volume",
+      "value": 57.5,
+      "unit": "%",
+      "reference_min": 40.0,
+      "reference_max": 50.0,
+      "status": "high"
+    },
+    {
+      "name": "Mean Corpuscular Volume",
+      "value": 87.75,
+      "unit": "fL",
+      "reference_min": 83.0,
+      "reference_max": 101.0,
+      "status": "normal"
+    },
+    {
+      "name": "MCH",
+      "value": 27.2,
+      "unit": "pg",
+      "reference_min": 27.0,
+      "reference_max": 32.0,
+      "status": "normal"
+    },
+    {
+      "name": "MCHC",
+      "value": 32.8,
+      "unit": "g/dL",
+      "reference_min": 32.5,
+      "reference_max": 34.5,
+      "status": "normal"
+    },
+    {
+      "name": "RDW",
+      "value": 13.6,
+      "unit": "%",
+      "reference_min": 11.6,
+      "reference_max": 14.0,
+      "status": "normal"
+    },
+    {
+      "name": "WBC Count",
+      "value": 9000.0,
+      "unit": "cumm",
+      "reference_min": 4000.0,
+      "reference_max": 11000.0,
+      "status": "normal"
+    },
+    {
+      "name": "Neutrophils",
+      "value": 60.0,
+      "unit": "%",
+      "reference_min": 50.0,
+      "reference_max": 62.0,
+      "status": "normal"
+    },
+    {
+      "name": "Lymphocytes",
+      "value": 31.0,
+      "unit": "%",
+      "reference_min": 20.0,
+      "reference_max": 40.0,
+      "status": "normal"
+    },
+    {
+      "name": "Eosinophils",
+      "value": 1.0,
+      "unit": "%",
+      "reference_min": 0.0,
+      "reference_max": 6.0,
+      "status": "normal"
+    },
+    {
+      "name": "Monocytes",
+      "value": 7.0,
+      "unit": "%",
+      "reference_min": 0.0,
+      "reference_max": 10.0,
+      "status": "normal"
+    },
+    {
+      "name": "Basophils",
+      "value": 1.0,
+      "unit": "%",
+      "reference_min": 0.0,
+      "reference_max": 2.0,
+      "status": "normal"
+    },
+    {
+      "name": "Platelet Count",
+      "value": 150000.0,
+      "unit": "cumm",
+      "reference_min": 150000.0,
+      "reference_max": 410000.0,
+      "status": "normal"
+    }
+  ],
+  "insights": [
+    "Low Hemoglobin may suggest anemia or iron deficiency.",
+    "High Packed Cell Volume could indicate dehydration or polycythemia."
+  ],
+  "detailed_analysis": "This Complete Blood Count (CBC) test gives us important information about your blood cells. Let's look at what these results mean:\n\nYour hemoglobin level is slightly low at 12.5 g/dL (normal range is 13.0-17.0). Hemoglobin is the protein in red blood cells that carries oxygen throughout your body. A low hemoglobin level might suggest you have mild anemia or could be low on iron, which is important for making healthy red blood cells. Your red blood cell count is normal, which is good news.\n\nOne result that stands out is your packed cell volume (also called hematocrit), which is high at 57.5% (normal range is 40.0-50.0). This measures the percentage of your blood that's made up of red blood cells. A high level could mean you're dehydrated or, in some cases, could be related to a condition called polycythemia where your body makes too many red blood cells. Your other red blood cell measurements (MCV, MCH, MCHC) are all within normal ranges, which suggests your red blood cells are healthy in size and content.\n\nYour white blood cell count and all the different types of white blood cells (neutrophils, lymphocytes, etc.) are all normal, which is reassuring as it suggests your immune system is functioning well. Your platelet count is also normal, which is important for proper blood clotting. The RDW, which measures variation in red blood cell size, is slightly above the middle of the normal range.\n\nSince you have both a low hemoglobin and high packed cell volume, it would be a good idea to talk with your doctor about these results. They might want to check if you're drinking enough water or if you need any additional tests to understand why your hemoglobin is low. Remember, these results are just one piece of the puzzle, and your doctor can help determine if any follow-up is needed based on your overall health and any symptoms you might be experiencing.",
+  "summary": "Your blood test shows a slightly low hemoglobin level and a high packed cell volume, which could suggest mild anemia and possible dehydration. It would be a good idea to discuss these results with your doctor, who can help determine if any follow-up tests or treatments are needed based on your overall health.",
+  "upload_date": "2026-03-07T09:11:52.265000",
+  "analyzed_at": "2026-03-07T09:13:34.703000",
+  "reviewed_at": null,
+  "reviewed_by": null
+}

@@ -58,8 +58,6 @@ class LLMClient:
             payload["response_format"] = response_format
         
         async with httpx.AsyncClient(timeout=60.0) as client:
-            last_error = None
-            for attempt in range(3):
                 try:
                     response = await client.post(
                         f"{self.base_url}/chat/completions",

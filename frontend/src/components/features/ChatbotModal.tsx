@@ -86,9 +86,9 @@ export function ChatbotModal({ open, onOpenChange, reportContext }: ChatbotModal
                     </div>
 
                     {/* Sticky Disclaimer */}
-                    <div className="bg-bg-surface border-b border-border py-2 px-4 flex items-center justify-center gap-2 shrink-0">
-                        <TriangleAlert className="h-3 w-3 text-status-low" />
-                        <span className="text-[11px] text-text-muted uppercase tracking-wider font-medium">
+                    <div className="chatbot-disclaimer bg-bg-surface border-b border-border py-2 px-4 flex items-center justify-center gap-2 shrink-0">
+                        <TriangleAlert className="chatbot-disclaimer-icon h-3 w-3 text-status-low" />
+                        <span className="chatbot-disclaimer-text text-[11px] text-text-muted uppercase tracking-wider font-medium">
                             AI-powered insights · Not a substitute for medical advice
                         </span>
                     </div>

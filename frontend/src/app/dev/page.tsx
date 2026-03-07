@@ -7,6 +7,7 @@ import { StatusBadge, StatusType } from '@/components/ui/StatusBadge';
 import { Code, Terminal } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { ThemeToggle } from '@/components/features/ThemeToggle';
 
 interface DevReportRow {
     id: string;
@@ -69,8 +70,24 @@ export default function DevDashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-[#07090C] text-text-body font-mono">
-            <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px] flex flex-col gap-[32px]">
+        <div className="force-dark min-h-screen bg-[#07090C] text-text-body font-mono flex flex-col">
+
+            {/* Top Navigation Bar */}
+            <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-[#0a0a0a] px-[20px] lg:px-[48px]">
+                <div className="flex items-center gap-2">
+                    <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
+                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">DEV</span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-text-primary">SysAdmin</span>
+                    <ThemeToggle />
+                    <button className="text-sm text-text-muted hover:text-status-high transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </header>
+
+            <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px] flex flex-col gap-[32px] flex-1">
 
                 {/* Header */}
                 <div className="flex items-center gap-4 border-b border-border pb-6">

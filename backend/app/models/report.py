@@ -52,6 +52,7 @@ class Report(Document):
 
     # Processing status
     status: ReportStatus = ReportStatus.UPLOADED
+    current_step: str = "Initializing"
 
     # Extracted content
     extracted_text: Optional[str] = None
@@ -75,10 +76,13 @@ class Report(Document):
 class ReportOut(BaseModel):
     """Schema for report list response."""
     report_id: str
+    file_name: str
+    file_url: Optional[str] = None
     report_type: str
     upload_date: datetime
     summary: Optional[str] = None
     status: ReportStatus
+    current_step: str = "Initializing"
 
     model_config = {"from_attributes": True}
 
@@ -86,10 +90,13 @@ class ReportOut(BaseModel):
     def from_report(cls, report: Report) -> "ReportOut":
         return cls(
             report_id=str(report.id),
+            file_name=report.file_name,
+            file_url=report.file_url,
             report_type=report.report_type,
             upload_date=report.upload_date,
             summary=report.summary,
-            status=report.status
+            status=report.status,
+            current_step=getattr(report, "current_step", "Initializing")
         )
 
 
@@ -113,6 +120,7 @@ class ReportDetailOut(BaseModel):
     status: ReportStatus
     upload_date: datetime
     analyzed_at: Optional[datetime] = None
+    current_step: str = "Initializing"
 
     model_config = {"from_attributes": True}
 
@@ -137,5 +145,6 @@ class ReportDetailOut(BaseModel):
             insights=report.insights,
             status=report.status,
             upload_date=report.upload_date,
-            analyzed_at=report.analyzed_at
+            analyzed_at=report.analyzed_at,
+            current_step=getattr(report, "current_step", "Initializing")
         )

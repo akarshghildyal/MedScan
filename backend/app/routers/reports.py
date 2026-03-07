@@ -98,8 +98,12 @@ async def run_pipeline(report_id: str, file_path: str):
         
         logger.info(f"Starting pipeline for report {report_id}")
         
+        async def update_progress(message: str):
+            report.current_step = message
+            await report.save()
+        
         # Run the full pipeline
-        result = await agent_pipeline.run(file_path=file_path)
+        result = await agent_pipeline.run(file_path=file_path, progress_callback=update_progress)
         
         if not result["success"]:
             report.status = ReportStatus.FAILED

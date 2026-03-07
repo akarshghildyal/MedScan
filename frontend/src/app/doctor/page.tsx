@@ -7,6 +7,7 @@ import { DataTable, Column, RowVariant } from '@/components/ui/DataTable';
 import { StatusBadge, StatusType } from '@/components/ui/StatusBadge';
 import { ReportAnalysisDrawer } from '@/components/features/ReportAnalysisDrawer';
 import { TrendModal } from '@/components/features/TrendModal';
+import { fetchApi } from '@/lib/api';
 
 interface DoctorReportRow {
     id: string;
@@ -19,53 +20,41 @@ interface DoctorReportRow {
     isReviewed: boolean;
 }
 
-const mockDoctorReports: DoctorReportRow[] = [
-    {
-        id: '1',
-        patientName: 'John Doe',
-        patientId: 'PT-8932',
-        type: 'Blood Test',
-        dateShared: '10 mins ago',
-        flaggedCount: 1,
-        highestSeverity: 'HIGH',
-        isReviewed: false,
-    },
-    {
-        id: '2',
-        patientName: 'Alice Smith',
-        patientId: 'PT-4021',
-        type: 'Lipid Panel',
-        dateShared: '2 hours ago',
-        flaggedCount: 3,
-        highestSeverity: 'CRITICAL',
-        isReviewed: false,
-    },
-    {
-        id: '3',
-        patientName: 'Bob Johnson',
-        patientId: 'PT-1055',
-        type: 'Biochemistry',
-        dateShared: '1 day ago',
-        flaggedCount: 0,
-        highestSeverity: 'NORMAL',
-        isReviewed: true,
-    },
-];
-
-const mockTrendData = [
-    { date: 'Jan 2025', value: 8.5, status: 'NORMAL' as StatusType },
-    { date: 'Jun 2025', value: 9.2, status: 'NORMAL' as StatusType },
-    { date: 'Oct 2025', value: 10.1, status: 'NORMAL' as StatusType },
-    { date: 'Jan 2026', value: 11.8, status: 'HIGH' as StatusType },
-];
-
 export default function DoctorDashboard() {
-    const [reports, setReports] = useState<DoctorReportRow[]>(mockDoctorReports);
+    const [reports, setReports] = useState<DoctorReportRow[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isTrendOpen, setIsTrendOpen] = useState(false);
 
     const [activeReport, setActiveReport] = useState<DoctorReportRow | null>(null);
     const [activeTrendMarker, setActiveTrendMarker] = useState('');
+
+    // Load data
+    const loadData = async () => {
+        try {
+            setIsLoading(true);
+            const data = await fetchApi('/doctor/reports');
+            const mappedReports: DoctorReportRow[] = data.map((r: any) => ({
+                id: r.report_id,
+                patientName: r.patient_name,
+                patientId: r.patient_id,
+                type: r.report_type,
+                dateShared: new Date(r.date_shared).toLocaleString(),
+                flaggedCount: r.flagged_count,
+                highestSeverity: r.highest_severity as StatusType,
+                isReviewed: r.is_reviewed
+            }));
+            setReports(mappedReports);
+        } catch (error) {
+            console.error('Error fetching reports:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
 
     // Default Sort: Critical first, then most recently shared
     const sortedReports = useMemo(() => {
@@ -133,8 +122,24 @@ export default function DoctorDashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-bg-base text-text-body">
-            <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px]">
+        <div className="min-h-screen bg-bg-base text-text-body flex flex-col">
+
+            {/* Top Navigation Bar */}
+            <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
+                <div className="flex items-center gap-2">
+                    <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
+                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">DOCTOR</span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-text-primary">Dr. Smith</span>
+                    <ThemeToggle />
+                    <button className="text-sm text-text-muted hover:text-status-high transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </header>
+
+            <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px] flex flex-col flex-1">
                 <div className="flex w-full flex-col gap-[32px]">
 
                     {/* Header Row */}

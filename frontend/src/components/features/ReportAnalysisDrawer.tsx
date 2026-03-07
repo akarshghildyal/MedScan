@@ -20,6 +20,7 @@ interface ReportAnalysisDrawerProps {
     onOpenChange: (open: boolean) => void;
     filename: string;
     type: string;
+    report?: any;
     onShareClick?: () => void;
     onTrendClick: (markerName: string) => void;
     isDoctorView?: boolean;
@@ -38,6 +39,7 @@ export function ReportAnalysisDrawer({
     onOpenChange,
     filename,
     type,
+    report,
     onShareClick,
     onTrendClick,
     isDoctorView = false,
@@ -86,33 +88,33 @@ export function ReportAnalysisDrawer({
             <div className="flex flex-col gap-[32px]">
 
                 {/* Section 1 - AI Summary */}
-                <div className="rounded-[6px] bg-bg-elevated p-[20px] pb-[24px]">
+                <div className="ai-summary-card rounded-[6px] bg-bg-elevated p-[20px] pb-[24px]">
                     <div className="flex items-center gap-2 mb-3">
                         <Sparkles className="h-4 w-4 text-accent" />
                         <h3 className="font-sora text-[15px] font-bold text-text-primary m-0">AI Summary</h3>
                     </div>
                     <p className="font-sans text-[15px] text-text-body leading-[1.6]">
-                        The report indicates an elevated White Blood Cell (WBC) count at 11.8 x10^9/L, which slightly exceeds the normal upper limit of 11.0. This suggests a potential mild inflammatory response or recent mild infection. All other major markers, including Hemoglobin and Platelets, are well within their healthy reference ranges.
+                        {report?.summary || "No AI summary available for this report yet."}
                     </p>
                 </div>
 
                 {/* Section 2 - Key Insights */}
-                <div className="rounded-[6px] bg-bg-surface border-l-[4px] border-l-status-low p-[20px]">
+                <div className={cn("key-insights-card rounded-[6px] bg-bg-surface border-l-[4px] p-[20px]", report?.insights?.length ? "border-l-status-low" : "border-l-border")}>
                     <h3 className="font-sora text-[15px] font-bold text-text-primary mb-4">Key Insights</h3>
-                    <ul className="flex flex-col gap-3">
-                        <li className="flex items-start gap-3">
-                            <TriangleAlert className="h-4 w-4 text-status-low shrink-0 mt-[2px]" />
-                            <span className="font-sans text-[14px] text-text-body">
-                                WBC is elevated by 7% above the maximum reference range.
-                            </span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <TriangleAlert className="h-4 w-4 text-status-low shrink-0 mt-[2px]" />
-                            <span className="font-sans text-[14px] text-text-body">
-                                No indicators of anemia; Hemoglobin and RBC counts are stable.
-                            </span>
-                        </li>
-                    </ul>
+                    {report?.insights?.length > 0 ? (
+                        <ul className="flex flex-col gap-3">
+                            {report.insights.map((insight: string, idx: number) => (
+                                <li key={idx} className="flex items-start gap-3">
+                                    <TriangleAlert className="h-4 w-4 text-status-low shrink-0 mt-[2px]" />
+                                    <span className="font-sans text-[14px] text-text-body">
+                                        {insight}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-[14px] text-text-muted">No specific insights detected.</p>
+                    )}
                 </div>
 
                 {/* Section 3 - Extracted Values */}
@@ -131,20 +133,23 @@ export function ReportAnalysisDrawer({
                                 </tr>
                             </thead>
                             <tbody>
-                                {mockValues.map((row, i) => (
+                                {(report?.markers || []).map((row: any, i: number) => (
                                     <tr key={i} className="border-b border-border last:border-0 hover:bg-white/[0.02]">
                                         <td className="px-4 py-3 text-[13px] font-medium text-text-primary">{row.name}</td>
                                         <td className="px-4 py-3 text-[13px] font-mono text-text-primary font-bold">{row.value}</td>
                                         <td className="px-4 py-3 text-[13px] text-text-muted">{row.unit}</td>
-                                        <td className="px-4 py-3 text-[13px] font-mono text-text-muted">{row.range}</td>
-                                        <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
+                                        <td className="px-4 py-3 text-[13px] font-mono text-text-muted">
+                                            {row.reference_min !== null && row.reference_max !== null
+                                                ? `${row.reference_min} - ${row.reference_max}`
+                                                : 'N/A'}
+                                        </td>
+                                        <td className="px-4 py-3"><StatusBadge status={(row.status || 'normal').toUpperCase() as StatusType} /></td>
                                         <td className="px-4 py-3 text-center">
                                             <button
                                                 onClick={() => onTrendClick(row.name)}
                                                 className="group flex justify-center hover:bg-bg-elevated p-1 rounded transition-colors"
                                                 title={`View ${row.name} trend`}
                                             >
-                                                {/* Tiny 40px sparkline SVG mock */}
                                                 <svg width="40" height="16" viewBox="0 0 40 16" className="overflow-visible">
                                                     <path
                                                         d="M 0 12 L 15 8 L 25 14 L 40 4"
@@ -159,6 +164,13 @@ export function ReportAnalysisDrawer({
                                         </td>
                                     </tr>
                                 ))}
+                                {(!report?.markers || report.markers.length === 0) && (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-[13px] text-text-muted">
+                                            No biomarkers extracted from this report.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -178,7 +190,7 @@ export function ReportAnalysisDrawer({
                             </Accordion.Header>
                             <Accordion.Content className="overflow-hidden text-[14px] text-text-body data-[state=closed]:animate-[accordion-up_0.2s_ease-out] data-[state=open]:animate-[accordion-down_0.2s_ease-out]">
                                 <div className="px-[20px] pb-[20px] pt-0 leading-[1.6]">
-                                    A complete blood count (CBC) measures several components and features of your blood, including red blood cells, which carry oxygen; white blood cells, which fight infection; and platelets, which help with blood clotting. An elevated white blood cell count typically indicates your body is actively fighting an infection, or experiencing inflammation. Given that your RBC and Hemoglobin levels remain stable, severe or chronic underlying conditions are less likely. However, we advise monitoring this over the next cycle to ensure the WBC count normalizes.
+                                    {report?.detailed_analysis || "No detailed clinical explanation was generated for this report."}
                                 </div>
                             </Accordion.Content>
                         </Accordion.Item>

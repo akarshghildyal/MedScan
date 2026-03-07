@@ -72,8 +72,8 @@ export function UploadStrip({
             className={cn(
                 'group relative flex w-full flex-col gap-4 rounded-[6px] bg-bg-surface p-[24px] transition-all duration-200',
                 isDragOver
-                    ? 'border-accent border-solid bg-accent/5'
-                    : 'border-border border-dashed border-[1px] hover:border-accent hover:border-[1.5px]',
+                    ? 'upload-strip-drag border-solid'
+                    : 'border-border border-dashed border-[1px] hover:upload-strip-drag',
                 className
             )}
             onDragOver={handleDragOver}
@@ -152,7 +152,7 @@ export function UploadStrip({
                                 Upload Pathology Report
                             </h2>
                             <p className="font-sans text-[15px] text-text-muted">
-                                PDF format only · AI analysis in ~15 seconds
+                                PDF format only · Quick AI analysis
                             </p>
                         </div>
                     </div>

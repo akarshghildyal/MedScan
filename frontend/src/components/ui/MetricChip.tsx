@@ -16,8 +16,8 @@ export function MetricChip({
 }: MetricChipProps) {
     const valueColor = {
         default: 'text-text-primary',
-        warning: 'text-status-low',
-        danger: 'text-status-high',
+        warning: 'text-[var(--color-status-low-text)]',
+        danger: 'text-[var(--color-status-high-text)]',
     };
 
     return (

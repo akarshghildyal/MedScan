@@ -34,7 +34,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var storedTheme = localStorage.getItem('medscan-theme');
+                if (storedTheme) {
+                  document.documentElement.setAttribute('data-theme', storedTheme);
+                } else {
+                  var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+                  document.documentElement.setAttribute('data-theme', prefersLight ? 'light' : 'dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${sora.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans bg-bg-base text-text-body antialiased`}
       >

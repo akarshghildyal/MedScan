@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Activity, Clock, TrendingUp, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { fetchApi } from '@/lib/api';
+import { ThemeToggle } from '@/components/features/ThemeToggle';
 
 export default function LoginPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -30,13 +32,64 @@ export default function LoginPage() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [apiError, setApiError] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setApiError('');
         if (validate()) {
-            // Stub submission for now
-            // In a real app we would call an API, then get JWT, store in httpOnly cookie
-            // Here just redirect to patient dashboard
-            router.push('/patient');
+            setIsLoading(true);
+            try {
+                if (isLogin) {
+                    const params = new URLSearchParams();
+                    params.append('username', email);
+                    params.append('password', password);
+
+                    const data = await fetchApi('/auth/login', {
+                        method: 'POST',
+                        body: params,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+
+                    localStorage.setItem('medscan-token', data.access_token);
+
+                    if (data.user.role === 'admin' || data.user.role === 'hospital') router.push('/admin');
+                    else if (data.user.role === 'doctor') router.push('/doctor');
+                    else router.push('/patient');
+                } else {
+                    const payload = {
+                        email,
+                        password,
+                        full_name: fullName,
+                        dob,
+                        sex,
+                        role: 'patient'
+                    };
+
+                    await fetchApi('/auth/register', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+
+                    // Auto login after register
+                    const params = new URLSearchParams();
+                    params.append('username', email);
+                    params.append('password', password);
+                    const data = await fetchApi('/auth/login', {
+                        method: 'POST',
+                        body: params,
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    });
+
+                    localStorage.setItem('medscan-token', data.access_token);
+                    router.push('/patient');
+                }
+            } catch (err: any) {
+                setApiError(err.message || 'An error occurred. Please try again.');
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -48,17 +101,12 @@ export default function LoginPage() {
 
     return (
         <div className="flex min-h-screen w-full flex-col lg:flex-row bg-bg-base">
+            <ThemeToggle className="fixed top-[16px] right-[16px] z-50" />
 
             {/* Left Panel: Context & Brand */}
-            <div className="relative flex w-full lg:w-1/2 flex-col justify-center bg-bg-surface p-[48px] overflow-hidden">
+            <div className="relative flex w-full lg:w-1/2 flex-col justify-center login-left-panel p-[48px] overflow-hidden">
                 {/* Dot pattern background mix blend */}
-                <div
-                    className="absolute inset-0 pointer-events-none opacity-20"
-                    style={{
-                        backgroundImage: 'radial-gradient(circle, var(--color-text-muted) 1px, transparent 1px)',
-                        backgroundSize: '24px 24px'
-                    }}
-                />
+                <div className="absolute inset-0 pointer-events-none login-left-dots" />
 
                 <div className="relative z-10 mx-auto w-full max-w-md">
                     {/* Logo Mark */}
@@ -80,7 +128,7 @@ export default function LoginPage() {
                             <div className="bg-bg-elevated p-3 rounded-[6px]">
                                 <Clock className="text-accent h-[24px] w-[24px]" />
                             </div>
-                            <span className="font-sans text-[16px] text-text-body font-medium">AI Analysis in ~15s</span>
+                            <span className="font-sans text-[16px] text-text-body font-medium">Quick AI Analysis</span>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -113,6 +161,11 @@ export default function LoginPage() {
                     </p>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-[20px]" noValidate>
+                        {apiError && (
+                            <div className="bg-status-high/10 border border-status-high text-status-high text-[14px] p-3 rounded-[6px]">
+                                {apiError}
+                            </div>
+                        )}
 
                         {!isLogin && (
                             <>
@@ -191,9 +244,10 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            className="mt-[16px] w-full h-[44px] rounded-[4px] bg-accent font-sans text-[15px] font-bold text-bg-base hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
+                            disabled={isLoading}
+                            className="mt-[16px] w-full h-[44px] rounded-[4px] bg-accent font-sans text-[15px] font-bold btn-primary-text hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isLogin ? 'Sign In' : 'Sign Up'}
+                            {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
                         </button>
                     </form>
 

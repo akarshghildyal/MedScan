@@ -85,7 +85,7 @@ export function DataTable<T>({
                                 <tr
                                     key={getRowKey(row)}
                                     className={cn(
-                                        'group min-h-[52px] border-b border-border border-l-[3px] transition-colors last:border-b-0 hover:bg-white/[0.02]',
+                                        'data-table-row group min-h-[52px] border-b border-border border-l-[3px] transition-colors last:border-b-0 hover:bg-white/[0.02]',
                                         variantStyles[variant]
                                     )}
                                 >

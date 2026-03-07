@@ -23,9 +23,14 @@ router = APIRouter()
 
 class DoctorReportSummary(BaseModel):
     patient_name: str
+    patient_id: str
     report_id: str
     report_type: str
     summary: str | None = None
+    flagged_count: int = 0
+    highest_severity: str = "NORMAL"
+    is_reviewed: bool = False
+    date_shared: str
 
 
 @router.get("/reports", response_model=List[DoctorReportSummary])
@@ -55,11 +60,30 @@ async def get_shared_reports(
             patient = await User.get(PydanticObjectId(share.patient_id))
             patient_name = patient.full_name or patient.email if patient else "Unknown"
             
+            # Calculate flagged markers
+            abnormal_markers = [m for m in report.markers if m.status != "normal"]
+            flagged_count = len(abnormal_markers)
+            
+            # Determine highest severity
+            severity_order = {"normal": 0, "low": 1, "high": 2}
+            highest_severity = "NORMAL"
+            if abnormal_markers:
+                max_severity = max(abnormal_markers, key=lambda m: severity_order.get(m.status, 0))
+                highest_severity = max_severity.status.upper()
+            
+            # Check if reviewed
+            is_reviewed = report.reviewed_at is not None
+            
             results.append(DoctorReportSummary(
                 patient_name=patient_name,
+                patient_id=str(share.patient_id),
                 report_id=str(report.id),
                 report_type=report.report_type,
-                summary=report.summary
+                summary=report.summary,
+                flagged_count=flagged_count,
+                highest_severity=highest_severity,
+                is_reviewed=is_reviewed,
+                date_shared=share.shared_at.isoformat() if share.shared_at else report.upload_date.isoformat()
             ))
         except Exception as e:
             logger.warning(f"Error loading shared report {share.report_id}: {e}")

@@ -24,48 +24,66 @@ class UserAssignment(BaseModel):
     patient_id: str
     doctor_id: str
 
-@router.post("/patients", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def create_patient(
-    user_in: UserCreate,
+from pydantic import EmailStr
+class LinkUserRequest(BaseModel):
+    email: EmailStr
+
+
+@router.get("/patients", response_model=List[UserOut])
+async def list_patients(current_user: User = Depends(get_current_user)):
+    """List all patients linked to this hospital."""
+    if current_user.role != UserRole.HOSPITAL:
+        raise HTTPException(status_code=403, detail="Hospital access required")
+    patients = await User.find(User.role == UserRole.PATIENT, User.hospital_id == str(current_user.id)).to_list()
+    return [UserOut.from_user(p) for p in patients]
+
+@router.get("/doctors", response_model=List[UserOut])
+async def list_doctors(current_user: User = Depends(get_current_user)):
+    """List all doctors linked to this hospital."""
+    if current_user.role != UserRole.HOSPITAL:
+        raise HTTPException(status_code=403, detail="Hospital access required")
+    doctors = await User.find(User.role == UserRole.DOCTOR, User.hospital_id == str(current_user.id)).to_list()
+    return [UserOut.from_user(d) for d in doctors]
+
+@router.post("/patients", response_model=UserOut)
+async def link_patient(
+    request: LinkUserRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new patient."""
-    user_in.role = UserRole.PATIENT
-    existing = await User.find_one(User.email == user_in.email)
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    """Link an existing patient to the hospital."""
+    if current_user.role != UserRole.HOSPITAL:
+        raise HTTPException(status_code=403, detail="Hospital access required")
+
+    user = await User.find_one(User.email == request.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    hashed_password = pwd_context.hash(user_in.password)
-    user = User(
-        email=user_in.email,
-        hashed_password=hashed_password,
-        role=user_in.role,
-        full_name=user_in.full_name,
-        dob=user_in.dob,
-        sex=user_in.sex
-    )
-    await user.create()
+    # Optional: we can restrict to only linking patients
+    if user.role != UserRole.PATIENT:
+        raise HTTPException(status_code=400, detail="Cannot link a non-patient user here")
+
+    # Link them
+    user.hospital_id = str(current_user.id)
+    await user.save()
     return UserOut.from_user(user)
 
-@router.post("/doctors", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def create_doctor(
-    user_in: UserCreate,
+@router.post("/doctors", response_model=UserOut)
+async def link_doctor(
+    request: LinkUserRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Create a new doctor."""
-    user_in.role = UserRole.DOCTOR
-    existing = await User.find_one(User.email == user_in.email)
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    """Link an existing user as a doctor for the hospital."""
+    if current_user.role != UserRole.HOSPITAL:
+        raise HTTPException(status_code=403, detail="Hospital access required")
+
+    user = await User.find_one(User.email == request.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    hashed_password = pwd_context.hash(user_in.password)
-    user = User(
-        email=user_in.email,
-        hashed_password=hashed_password,
-        role=user_in.role,
-        full_name=user_in.full_name
-    )
-    await user.create()
+    # Upgrade role to Doctor if they were a patient, or just link if already a doctor
+    user.role = UserRole.DOCTOR
+    user.hospital_id = str(current_user.id)
+    await user.save()
     return UserOut.from_user(user)
 
 @router.post("/assign")

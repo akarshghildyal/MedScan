@@ -1,35 +1,128 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPlus, Link as LinkIcon, Edit2, Trash2 } from 'lucide-react';
 import { MetricChip } from '@/components/ui/MetricChip';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
+import { ThemeToggle } from '@/components/features/ThemeToggle';
+import { fetchApi } from '@/lib/api';
 
 interface PatientRow { id: string; name: string; email: string; assignedDoctors: string[]; }
 interface DoctorRow { id: string; name: string; email: string; hospitalId: string; assignedPatients: number; }
 
-const mockPatients: PatientRow[] = [
-    { id: 'PT-8932', name: 'John Doe', email: 'john@example.com', assignedDoctors: ['Dr. Smith'] },
-    { id: 'PT-4021', name: 'Alice Smith', email: 'alice@example.com', assignedDoctors: [] },
-];
-
-const mockDoctors: DoctorRow[] = [
-    { id: 'DOC-101', name: 'Dr. Sarah Smith', email: 'smith@hospital.org', hospitalId: 'HOSP-A', assignedPatients: 1 },
-    { id: 'DOC-102', name: 'Dr. William Chen', email: 'chen@hospital.org', hospitalId: 'HOSP-A', assignedPatients: 0 },
-];
-
 export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<'patients' | 'doctors'>('patients');
+
+    // Data state
+    const [patients, setPatients] = useState<PatientRow[]>([]);
+    const [doctors, setDoctors] = useState<DoctorRow[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Modals state
     const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
     const [isAddDoctorOpen, setIsAddDoctorOpen] = useState(false);
     const [isAssignOpen, setIsAssignOpen] = useState(false);
 
-    // Stats
-    const activeAssignmentsCount = mockPatients.reduce((sum, p) => sum + p.assignedDoctors.length, 0);
+    // Form states
+    const [patientForm, setPatientForm] = useState({ name: '', email: '', hospitalId: '' });
+    const [doctorForm, setDoctorForm] = useState({ name: '', email: '', specialty: '' });
+    const [assignForm, setAssignForm] = useState({ patientId: '', doctorId: '' });
+
+    // Load data
+    const loadData = async () => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('medscan-token') : null;
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            const [patientsData, doctorsData] = await Promise.all([
+                fetchApi('/admin/patients'),
+                fetchApi('/admin/doctors')
+            ]);
+
+            const mappedPatients: PatientRow[] = patientsData.map((p: any) => ({
+                id: p.id,
+                name: p.full_name,
+                email: p.email,
+                assignedDoctors: [] // TODO: fetch assignments
+            }));
+
+            const mappedDoctors: DoctorRow[] = doctorsData.map((d: any) => ({
+                id: d.id,
+                name: d.full_name,
+                email: d.email,
+                hospitalId: 'HOSP-A', // TODO: add hospital ID to model
+                assignedPatients: 0 // TODO: fetch assignments
+            }));
+
+            setPatients(mappedPatients);
+            setDoctors(mappedDoctors);
+        } catch (error: any) {
+            console.error('Error loading data:', error);
+            if (error.message === 'Not authenticated' || error.message.includes('valid')) {
+                window.location.href = '/login';
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    // Submit handlers
+    const handleAddPatient = async () => {
+        try {
+            await fetchApi('/admin/patients', {
+                method: 'POST',
+                body: JSON.stringify({ email: patientForm.email })
+            });
+            setIsAddPatientOpen(false);
+            setPatientForm({ name: '', email: '', hospitalId: '' });
+            loadData();
+        } catch (error: any) {
+            alert(error.message || 'Failed to link patient');
+            console.error('Error adding patient:', error);
+        }
+    };
+
+    const handleAddDoctor = async () => {
+        try {
+            await fetchApi('/admin/doctors', {
+                method: 'POST',
+                body: JSON.stringify({ email: doctorForm.email })
+            });
+            setIsAddDoctorOpen(false);
+            setDoctorForm({ name: '', email: '', specialty: '' });
+            loadData();
+        } catch (error: any) {
+            alert(error.message || 'Failed to link doctor');
+            console.error('Error adding doctor:', error);
+        }
+    };
+
+    const handleAssign = async () => {
+        try {
+            await fetchApi('/admin/assign', {
+                method: 'POST',
+                body: JSON.stringify({
+                    patient_id: assignForm.patientId,
+                    doctor_id: assignForm.doctorId
+                })
+            });
+            setIsAssignOpen(false);
+            setAssignForm({ patientId: '', doctorId: '' });
+            loadData();
+        } catch (error) {
+            console.error('Error assigning:', error);
+        }
+    };
 
     const patientColumns: Column<PatientRow>[] = [
         { key: 'name', header: 'Name', render: (row) => <span className="font-bold text-text-primary">{row.name}</span> },
@@ -66,7 +159,7 @@ export default function AdminDashboard() {
         },
     ];
 
-    const FormModal = ({ open, onOpenChange, title, fields, buttonLabel }: any) => (
+    const FormModal = ({ open, onOpenChange, title, fields, buttonLabel, onSubmit }: any) => (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
@@ -75,37 +168,52 @@ export default function AdminDashboard() {
                         <Dialog.Title className="font-sora text-[18px] font-bold text-text-primary">{title}</Dialog.Title>
                         <Dialog.Close asChild><button className="text-text-muted hover:text-text-primary p-1"><X className="h-5 w-5" /></button></Dialog.Close>
                     </div>
-                    <div className="flex flex-col gap-4">
-                        {fields.map((f: any, i: number) => (
-                            <div key={i} className="flex flex-col gap-1">
-                                <label className="text-[12px] font-medium uppercase tracking-wider text-text-muted">{f.label}</label>
-                                {f.type === 'select' ? (
-                                    <select className="h-[44px] rounded-[6px] border border-border bg-bg-surface px-[16px] text-[15px] font-sans text-text-primary outline-none focus:border-accent">
-                                        {f.options.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
-                                    </select>
-                                ) : (
-                                    <input type={f.type || 'text'} placeholder={f.placeholder} className="h-[44px] rounded-[6px] border border-border bg-bg-surface px-[16px] text-[15px] font-sans text-text-primary outline-none focus:border-accent" />
-                                )}
-                            </div>
-                        ))}
-                        <button className="mt-4 w-full h-[44px] rounded-[4px] bg-accent font-bold text-bg-base hover:brightness-110">{buttonLabel}</button>
-                    </div>
+                    <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
+                        <div className="flex flex-col gap-4">
+                            {fields.map((f: any, i: number) => (
+                                <div key={i} className="flex flex-col gap-1">
+                                    <label className="text-[12px] font-medium uppercase tracking-wider text-text-muted">{f.label}</label>
+                                    {f.type === 'select' ? (
+                                        <select
+                                            value={f.value || ''}
+                                            onChange={(e) => f.onChange && f.onChange(e.target.value)}
+                                            className="h-[44px] rounded-[6px] border border-border bg-bg-surface px-[16px] text-[15px] font-sans text-text-primary outline-none focus:border-accent"
+                                        >
+                                            {f.options.map((opt: string) => <option key={opt} value={opt === 'Select a patient...' || opt === 'Select a doctor...' ? '' : opt}>{opt}</option>)}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type={f.type || 'text'}
+                                            placeholder={f.placeholder}
+                                            value={f.value || ''}
+                                            onChange={(e) => f.onChange && f.onChange(e.target.value)}
+                                            className="h-[44px] rounded-[6px] border border-border bg-bg-surface px-[16px] text-[15px] font-sans text-text-primary outline-none focus:border-accent"
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                            <button type="submit" className="mt-4 w-full h-[44px] rounded-[4px] bg-accent font-bold text-bg-base hover:brightness-110">{buttonLabel}</button>
+                        </div>
+                    </form>
                 </Dialog.Content>
             </Dialog.Portal>
         </Dialog.Root>
     );
 
+    const activeAssignmentsCount = doctors.reduce((sum, doc) => sum + doc.assignedPatients, 0);
+
     return (
         <div className="min-h-screen bg-bg-base text-text-body flex flex-col">
 
             {/* Top Navigation Bar */}
-            <header className="sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
+            <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
                 <div className="flex items-center gap-2">
                     <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
                     <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">ADMIN</span>
                 </div>
                 <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-text-primary">Hospital Admin</span>
+                    <ThemeToggle />
                     <button className="text-sm text-text-muted hover:text-status-high transition-colors">
                         Logout
                     </button>
@@ -121,8 +229,8 @@ export default function AdminDashboard() {
                         <p className="text-text-muted">Manage patient and doctor assignments</p>
                     </div>
                     <div className="flex flex-wrap gap-4">
-                        <MetricChip label="Total Patients" value={mockPatients.length} />
-                        <MetricChip label="Total Doctors" value={mockDoctors.length} />
+                        <MetricChip label="Total Patients" value={patients.length} />
+                        <MetricChip label="Total Doctors" value={doctors.length} />
                         <MetricChip label="Active Assignments" value={activeAssignmentsCount} />
                     </div>
                 </div>
@@ -160,34 +268,30 @@ export default function AdminDashboard() {
                 {/* Data Tables */}
                 <div>
                     {activeTab === 'patients' ? (
-                        <DataTable columns={patientColumns} rows={mockPatients} getRowKey={(r) => r.id} />
+                        <DataTable columns={patientColumns} rows={patients} getRowKey={(r) => r.id} />
                     ) : (
-                        <DataTable columns={doctorColumns} rows={mockDoctors} getRowKey={(r) => r.id} />
+                        <DataTable columns={doctorColumns} rows={doctors} getRowKey={(r) => r.id} />
                     )}
                 </div>
 
                 {/* Modals */}
                 <FormModal
-                    open={isAddPatientOpen} onOpenChange={setIsAddPatientOpen} title="Add Patient" buttonLabel="Create Patient"
+                    open={isAddPatientOpen} onOpenChange={setIsAddPatientOpen} title="Link Patient" buttonLabel="Link Patient" onSubmit={handleAddPatient}
                     fields={[
-                        { label: 'Full Name', placeholder: 'Jane Doe' },
-                        { label: 'Email', type: 'email', placeholder: 'jane@example.com' },
-                        { label: 'Hospital ID', placeholder: 'HOSP-A' }
+                        { label: 'Email', type: 'email', placeholder: 'patient@example.com', value: patientForm.email, onChange: (v: string) => setPatientForm(prev => ({ ...prev, email: v })) }
                     ]}
                 />
                 <FormModal
-                    open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen} title="Add Doctor" buttonLabel="Create Doctor"
+                    open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen} title="Link Doctor" buttonLabel="Link Doctor" onSubmit={handleAddDoctor}
                     fields={[
-                        { label: 'Full Name', placeholder: 'Dr. John Smith' },
-                        { label: 'Email', type: 'email', placeholder: 'smith@hospital.org' },
-                        { label: 'Specialty', placeholder: 'General Pathology' }
+                        { label: 'Email', type: 'email', placeholder: 'doctor@hospital.org', value: doctorForm.email, onChange: (v: string) => setDoctorForm(prev => ({ ...prev, email: v })) }
                     ]}
                 />
                 <FormModal
-                    open={isAssignOpen} onOpenChange={setIsAssignOpen} title="Assign Doctor to Patient" buttonLabel="Create Assignment"
+                    open={isAssignOpen} onOpenChange={setIsAssignOpen} title="Assign Doctor to Patient" buttonLabel="Create Assignment" onSubmit={handleAssign}
                     fields={[
-                        { label: 'Select Patient', type: 'select', options: ['Select a patient...', ...mockPatients.map(p => p.name)] },
-                        { label: 'Select Doctor', type: 'select', options: ['Select a doctor...', ...mockDoctors.map(d => d.name)] }
+                        { label: 'Select Patient', type: 'select', options: ['Select a patient...', ...patients.map(p => `${p.name} (${p.id})`)], value: assignForm.patientId, onChange: (v: string) => setAssignForm(prev => ({ ...prev, patientId: patients.find(p => `${p.name} (${p.id})` === v)?.id || '' })) },
+                        { label: 'Select Doctor', type: 'select', options: ['Select a doctor...', ...doctors.map(d => `${d.name} (${d.id})`)], value: assignForm.doctorId, onChange: (v: string) => setAssignForm(prev => ({ ...prev, doctorId: doctors.find(d => `${d.name} (${d.id})` === v)?.id || '' })) }
                     ]}
                 />
 

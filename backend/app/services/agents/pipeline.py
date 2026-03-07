@@ -50,12 +50,13 @@ class AgentPipeline:
             ("summary_generator", summary_generator),
         ]
     
-    async def run(self, file_path: str) -> Dict[str, Any]:
+    async def run(self, file_path: str, progress_callback=None) -> Dict[str, Any]:
         """
         Run the full pipeline on a PDF file.
         
         Args:
             file_path: Path to the uploaded PDF
+            progress_callback: Optional async function taking a single string argument
             
         Returns:
             {
@@ -75,6 +76,8 @@ class AgentPipeline:
         
         try:
             # === STEP 1: PDF Parser ===
+            if progress_callback:
+                await progress_callback("Parsing PDF document...")
             logger.info("Pipeline Step 1: PDF Parser")
             step1 = await pdf_parser.process({"file_path": file_path})
             agent_logs.append({"agent": "pdf_parser", "success": step1["success"]})
@@ -85,6 +88,8 @@ class AgentPipeline:
             raw_text = step1["data"]["text"]
             
             # === STEP 2: Report Classifier ===
+            if progress_callback:
+                await progress_callback("Classifying report type...")
             logger.info("Pipeline Step 2: Report Classifier")
             step2 = await report_classifier.process({"text": raw_text})
             agent_logs.append({"agent": "report_classifier", "success": step2["success"]})
@@ -94,6 +99,8 @@ class AgentPipeline:
                 report_type = step2["data"].get("report_type", "General Pathology")
             
             # === STEP 3: Data Extractor ===
+            if progress_callback:
+                await progress_callback("Extracting biomarkers...")
             logger.info("Pipeline Step 3: Data Extractor")
             step3 = await data_extractor.process({"text": raw_text, "report_type": report_type})
             agent_logs.append({"agent": "data_extractor", "success": step3["success"]})
@@ -104,6 +111,8 @@ class AgentPipeline:
             markers = step3["data"].get("markers", [])
             
             # === STEP 4: Abnormality Detector ===
+            if progress_callback:
+                await progress_callback("Detecting abnormalities...")
             logger.info("Pipeline Step 4: Abnormality Detector")
             step4 = await abnormality_detector.process({"markers": markers})
             agent_logs.append({"agent": "abnormality_detector", "success": step4["success"]})
@@ -114,6 +123,8 @@ class AgentPipeline:
             markers_with_status = step4["data"].get("markers", markers)
             
             # === STEP 5: Insight Generator ===
+            if progress_callback:
+                await progress_callback("Generating clinical insights...")
             logger.info("Pipeline Step 5: Insight Generator")
             step5 = await insight_generator.process({"markers": markers_with_status})
             agent_logs.append({"agent": "insight_generator", "success": step5["success"]})
@@ -123,6 +134,8 @@ class AgentPipeline:
                 insights = step5["data"].get("insights", [])
             
             # === STEP 6: Explanation Generator ===
+            if progress_callback:
+                await progress_callback("Drafting detailed explanation...")
             logger.info("Pipeline Step 6: Explanation Generator")
             step6 = await explanation_generator.process({
                 "markers": markers_with_status,
@@ -136,6 +149,8 @@ class AgentPipeline:
                 detailed_analysis = step6["data"].get("detailed_analysis", "")
             
             # === STEP 7: Summary Generator ===
+            if progress_callback:
+                await progress_callback("Finalizing summary...")
             logger.info("Pipeline Step 7: Summary Generator")
             step7 = await summary_generator.process({"detailed_analysis": detailed_analysis})
             agent_logs.append({"agent": "summary_generator", "success": step7["success"]})
