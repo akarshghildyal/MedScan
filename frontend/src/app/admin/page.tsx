@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { UserPlus, Link as LinkIcon, Edit2, Trash2 } from 'lucide-react';
 import { MetricChip } from '@/components/ui/MetricChip';
 import { DataTable, Column } from '@/components/ui/DataTable';
@@ -13,6 +14,7 @@ interface PatientRow { id: string; name: string; email: string; assignedDoctors:
 interface DoctorRow { id: string; name: string; email: string; hospitalId: string; assignedPatients: number; }
 
 export default function AdminDashboard() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<'patients' | 'doctors'>('patients');
 
     // Data state
@@ -179,7 +181,16 @@ export default function AdminDashboard() {
                                             onChange={(e) => f.onChange && f.onChange(e.target.value)}
                                             className="h-[44px] rounded-[6px] border border-border bg-bg-surface px-[16px] text-[15px] font-sans text-text-primary outline-none focus:border-accent"
                                         >
-                                            {f.options.map((opt: string) => <option key={opt} value={opt === 'Select a patient...' || opt === 'Select a doctor...' ? '' : opt}>{opt}</option>)}
+                                            {f.optionLabels ? (
+                                                f.options.map((opt: string) => {
+                                                    const isPlaceholder = opt.startsWith('Select a');
+                                                    const val = isPlaceholder ? '' : opt;
+                                                    const label = f.optionLabels[val] || opt;
+                                                    return <option key={opt} value={val}>{label}</option>;
+                                                })
+                                            ) : (
+                                                f.options.map((opt: string) => <option key={opt} value={opt.startsWith('Select a') ? '' : opt}>{opt}</option>)
+                                            )}
                                         </select>
                                     ) : (
                                         <input
@@ -214,7 +225,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-text-primary">Hospital Admin</span>
                     <ThemeToggle />
-                    <button className="text-sm text-text-muted hover:text-status-high transition-colors">
+                    <button onClick={() => { localStorage.removeItem('medscan-token'); router.push('/login'); }} className="text-sm text-text-muted hover:text-status-high transition-colors">
                         Logout
                     </button>
                 </div>
@@ -290,8 +301,8 @@ export default function AdminDashboard() {
                 <FormModal
                     open={isAssignOpen} onOpenChange={setIsAssignOpen} title="Assign Doctor to Patient" buttonLabel="Create Assignment" onSubmit={handleAssign}
                     fields={[
-                        { label: 'Select Patient', type: 'select', options: ['Select a patient...', ...patients.map(p => `${p.name} (${p.id})`)], value: assignForm.patientId, onChange: (v: string) => setAssignForm(prev => ({ ...prev, patientId: patients.find(p => `${p.name} (${p.id})` === v)?.id || '' })) },
-                        { label: 'Select Doctor', type: 'select', options: ['Select a doctor...', ...doctors.map(d => `${d.name} (${d.id})`)], value: assignForm.doctorId, onChange: (v: string) => setAssignForm(prev => ({ ...prev, doctorId: doctors.find(d => `${d.name} (${d.id})` === v)?.id || '' })) }
+                        { label: 'Select Patient', type: 'select', options: ['Select a patient...', ...patients.map(p => p.id)], value: assignForm.patientId, onChange: (v: string) => setAssignForm(prev => ({ ...prev, patientId: v })), optionLabels: { '': 'Select a patient...', ...Object.fromEntries(patients.map(p => [p.id, `${p.name} (${p.email})`])) } },
+                        { label: 'Select Doctor', type: 'select', options: ['Select a doctor...', ...doctors.map(d => d.id)], value: assignForm.doctorId, onChange: (v: string) => setAssignForm(prev => ({ ...prev, doctorId: v })), optionLabels: { '': 'Select a doctor...', ...Object.fromEntries(doctors.map(d => [d.id, `${d.name} (${d.email})`])) } }
                     ]}
                 />
 

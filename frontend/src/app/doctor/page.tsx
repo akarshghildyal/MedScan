@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Activity } from 'lucide-react';
 import { MetricChip } from '@/components/ui/MetricChip';
 import { DataTable, Column, RowVariant } from '@/components/ui/DataTable';
 import { StatusBadge, StatusType } from '@/components/ui/StatusBadge';
 import { ReportAnalysisDrawer } from '@/components/features/ReportAnalysisDrawer';
 import { TrendModal } from '@/components/features/TrendModal';
+import { ThemeToggle } from '@/components/features/ThemeToggle';
 import { fetchApi } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 interface DoctorReportRow {
     id: string;
@@ -20,7 +22,15 @@ interface DoctorReportRow {
     isReviewed: boolean;
 }
 
+const mockTrendData = [
+    { date: '2024-01', value: 6.2, status: 'NORMAL' as const },
+    { date: '2024-04', value: 7.1, status: 'NORMAL' as const },
+    { date: '2024-07', value: 5.8, status: 'NORMAL' as const },
+    { date: '2024-10', value: 8.3, status: 'HIGH' as const },
+];
+
 export default function DoctorDashboard() {
+    const router = useRouter();
     const [reports, setReports] = useState<DoctorReportRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -133,7 +143,7 @@ export default function DoctorDashboard() {
                 <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-text-primary">Dr. Smith</span>
                     <ThemeToggle />
-                    <button className="text-sm text-text-muted hover:text-status-high transition-colors">
+                    <button onClick={() => { localStorage.removeItem('medscan-token'); router.push('/login'); }} className="text-sm text-text-muted hover:text-status-high transition-colors">
                         Logout
                     </button>
                 </div>
