@@ -42,25 +42,32 @@ export default function AdminDashboard() {
 
         try {
             setIsLoading(true);
-            const [patientsData, doctorsData] = await Promise.all([
+            const [patientsData, doctorsData, assignmentsData] = await Promise.all([
                 fetchApi('/admin/patients'),
-                fetchApi('/admin/doctors')
+                fetchApi('/admin/doctors'),
+                fetchApi('/admin/assignments')
             ]);
 
-            const mappedPatients: PatientRow[] = patientsData.map((p: any) => ({
-                id: p.id,
-                name: p.full_name,
-                email: p.email,
-                assignedDoctors: [] // TODO: fetch assignments
-            }));
+            const mappedPatients: PatientRow[] = patientsData.map((p: any) => {
+                const patientAssignments = assignmentsData.filter((a: any) => a.patient_id === p.id);
+                return {
+                    id: p.id,
+                    name: p.full_name,
+                    email: p.email,
+                    assignedDoctors: patientAssignments.map((a: any) => a.doctor_name)
+                };
+            });
 
-            const mappedDoctors: DoctorRow[] = doctorsData.map((d: any) => ({
-                id: d.id,
-                name: d.full_name,
-                email: d.email,
-                hospitalId: 'HOSP-A', // TODO: add hospital ID to model
-                assignedPatients: 0 // TODO: fetch assignments
-            }));
+            const mappedDoctors: DoctorRow[] = doctorsData.map((d: any) => {
+                const doctorAssignments = assignmentsData.filter((a: any) => a.doctor_id === d.id);
+                return {
+                    id: d.id,
+                    name: d.full_name,
+                    email: d.email,
+                    hospitalId: 'HOSP-A',
+                    assignedPatients: doctorAssignments.length
+                };
+            });
 
             setPatients(mappedPatients);
             setDoctors(mappedDoctors);

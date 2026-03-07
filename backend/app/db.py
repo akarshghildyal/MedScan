@@ -5,6 +5,7 @@ from app.models.user import User
 from app.models.report import Report
 from app.models.chat import ChatHistory
 from app.models.share import ReportShare
+from app.models.assignment import Assignment
 import certifi
 
 async def init_db():
@@ -16,5 +17,5 @@ async def init_db():
     )
     await init_beanie(
         database=client[settings.MONGODB_DB_NAME],
-        document_models=[User, Report, ChatHistory, ReportShare]
+        document_models=[User, Report, ChatHistory, ReportShare, Assignment]
     )

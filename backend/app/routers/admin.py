@@ -11,6 +11,7 @@ from beanie import PydanticObjectId
 from passlib.context import CryptContext
 
 from app.models.user import User, UserCreate, UserOut, UserRole
+from app.models.assignment import Assignment
 from app.core.security import get_current_user
 
 router = APIRouter()
@@ -86,6 +87,33 @@ async def link_doctor(
     await user.save()
     return UserOut.from_user(user)
 
+@router.get("/assignments")
+async def list_assignments(current_user: User = Depends(get_current_user)):
+    """List all doctor-patient assignments for this hospital."""
+    if current_user.role != UserRole.HOSPITAL:
+        raise HTTPException(status_code=403, detail="Hospital access required")
+    
+    assignments = await Assignment.find(
+        Assignment.hospital_id == str(current_user.id)
+    ).to_list()
+    
+    result = []
+    for a in assignments:
+        try:
+            patient = await User.get(PydanticObjectId(a.patient_id))
+            doctor = await User.get(PydanticObjectId(a.doctor_id))
+            result.append({
+                "id": str(a.id),
+                "patient_id": a.patient_id,
+                "patient_name": patient.full_name or patient.email if patient else "Unknown",
+                "doctor_id": a.doctor_id,
+                "doctor_name": doctor.full_name or doctor.email if doctor else "Unknown",
+                "assigned_at": a.assigned_at.isoformat()
+            })
+        except Exception:
+            continue
+    return result
+
 @router.post("/assign")
 async def assign_doctor_to_patient(
     assignment: AssignRequest,
@@ -106,10 +134,22 @@ async def assign_doctor_to_patient(
     if not doctor or doctor.role != UserRole.DOCTOR:
         raise HTTPException(status_code=404, detail="Doctor not found or invalid role")
 
-    # Store the assignment by adding doctor_id to patient's assigned_doctors list
-    # and patient_id to doctor's assigned_patients list (using hospital_id field for now)
-    # For a simple implementation, we just return success 
-    # The actual sharing happens when a patient shares a specific report with a doctor
+    # Check if assignment already exists
+    existing = await Assignment.find_one(
+        Assignment.patient_id == assignment.patient_id,
+        Assignment.doctor_id == assignment.doctor_id
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Assignment already exists")
+
+    # Create assignment
+    new_assignment = Assignment(
+        patient_id=assignment.patient_id,
+        doctor_id=assignment.doctor_id,
+        hospital_id=str(current_user.id)
+    )
+    await new_assignment.create()
+
     return {"message": f"Doctor {doctor.full_name or doctor.email} assigned to patient {patient.full_name or patient.email}"}
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
