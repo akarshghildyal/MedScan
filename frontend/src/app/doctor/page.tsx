@@ -41,6 +41,12 @@ export default function DoctorDashboard() {
 
     // Load data
     const loadData = async () => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('medscan-token') : null;
+        if (!token) {
+            router.push('/login');
+            return;
+        }
+
         try {
             setIsLoading(true);
             const data = await fetchApi('/doctor/reports');
@@ -55,8 +61,11 @@ export default function DoctorDashboard() {
                 isReviewed: r.is_reviewed
             }));
             setReports(mappedReports);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching reports:', error);
+            if (error.message?.includes('access required') || error.message?.includes('Not authenticated')) {
+                router.push('/login');
+            }
         } finally {
             setIsLoading(false);
         }
