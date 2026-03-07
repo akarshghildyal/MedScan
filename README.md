@@ -1,53 +1,64 @@
-# MedScan 🏥
+<div align="center">
+  <img src="https://img.shields.io/badge/Status-Beta-00C9A7?style=for-the-badge" alt="Status" />
+  <h1>🏥 MedScan</h1>
+  <p><b>Your pathology reports, understood.</b></p>
+  <p>An autonomous, multi-agent AI platform built to simplify, analyze, and track complex medical biomarker data for patients and healthcare providers.</p>
+</div>
 
-**Your medical reports, simplified.**
+---
 
-MedScan is an AI-powered platform that simplifies complex medical reports, making them easy to understand for patients and healthcare providers.
+## 🎯 The Motivation (Bridging the Gap)
+
+Medical diagnostic reports are designed for healthcare professionals and are notoriously difficult for patients to interpret. Patients frequently encounter confusing medical terminology, numerical values, and reference ranges. As a result, they often rely on internet searches that can produce incorrect and anxiety-inducing interpretations, while doctors spend significant clinical time explaining basic report details. 
+
+**MedScan gap-fills this problem** by acting as an intelligent translation layer. It translates complex diagnostic reports into understandable, accurate insights for patients, while preserving the clinical integrity of the medical information for doctors.
 
 ## ✨ Features
 
-- 🔐 **Secure Authentication** - Patient and Hospital user roles with JWT-based auth
-- 📄 **Report Upload** - Upload medical reports (PDF) for AI analysis
-- 🤖 **AI-Powered Analysis** - Multi-agent system for comprehensive report insights
-- 📊 **Personalized Dashboard** - View and manage your medical history
+- **Precision Clinical Design** — A custom, bespoke dark-mode interface built on Next.js 15+ App Router, Radix UI primitives, and Tailwind CSS.
+- **Multimodal AI Agents** — A complex FastAPI background pipeline utilizing LangChain to parse raw PDFs, extract specific biomarkers, and generate conversational clinical overviews.
+- **Role-Based Portals** — Specialized, interconnected dashboards for:
+  - **Patients**: Upload reports, view historical trends via Recharts, interact with the AI Chatbot, and securely share data.
+  - **Doctors**: Manage an assigned queue of patient reports, view flagged CRITICAL biomarkers, and digitally "Mark as Reviewed".
+  - **Hospital Admins**: Provision and assign doctors to patient pools via a structured management interface.
+  - **Developers**: Real-time pipeline execution viewer with raw JSON extraction logs.
+- **Secure Architecture** — JWT-based authentication layered over Beanie ODM (MongoDB) with strict route protection.
 
-## 📸 Screenshots
+## 📸 Interface
 
-### Login Page
-![Login Page](docs/screenshots/login.png)
+| Patient Dashboard | Report Analysis Drawer |
+|:---:|:---:|
+| <img src="screens/patient_reports.png" width="400"/> | <img src="screens/patient_drawer.png" width="400"/> |
+| **Admin Controls** | **Doctor Queue** |
+| <img src="screens/admin.png" width="400"/> | <img src="screens/doctor.png" width="400"/> |
 
-### Registration Page
-![Registration Page](docs/screenshots/register.png)
+## 🛠️ Technology Stack
 
-## 🛠️ Tech Stack
+**Frontend (Next.js 15+ App Router)**
+- Framework: React 19 + Next.js
+- Styling: Tailwind CSS v4 + native CSS variables
+- UI Behaviors: Radix UI Primitives, Lucide Icons
+- Data Vis: Recharts
+- Fonts: Sora (Headings), DM Sans (Body), JetBrains Mono (Data)
 
-**Frontend:**
-- React 18 + Vite
-- Material-UI (MUI)
-- Redux Toolkit
-- React Router
-
-**Backend:**
-- FastAPI (Python)
-- MongoDB + Beanie ODM
-- JWT Authentication
-- LangChain + OpenAI
+**Backend (FastAPI)**
+- Framework: FastAPI (Python 3.11+)
+- Database: MongoDB + Beanie ODM
+- Background Tasks: Native FastAPI background execution + Celery patterns
+- AI Core: LangChain, LLM APIs
+- Security: Passlib (bcrypt), JWT tokens
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
 - MongoDB (local or Atlas)
 
-### Backend Setup
+### 1. Backend Setup
 
 ```bash
-# Navigate to backend
 cd backend
-
-# Create virtual environment
 python -m venv .venv
 
 # Activate virtual environment
@@ -56,79 +67,53 @@ python -m venv .venv
 # Linux/Mac:
 source .venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Create .env file with your configuration
+# Create .env and configure MongoDB URI & LLM API keys
 cp .env.example .env
-# Edit .env with your MongoDB URI and OpenAI API key
 
-# Run the server
+# Run development server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend Setup
+### 2. Frontend Setup
 
 ```bash
-# Navigate to frontend
 cd frontend
-
-# Install dependencies
 npm install
 
-# Run development server
+# Start Turbopack dev server
 npm run dev
 ```
-
-### Environment Variables
-
-Create a `.env` file in the `backend` directory:
-
-```env
-MONGODB_URI=mongodb://localhost:27017/medscan
-SECRET_KEY=your-secret-key-here
-OPENAI_API_KEY=your-openai-api-key
-```
+Navigate to `http://localhost:3000` to view the application.
 
 ## 📁 Project Structure
 
-```
+```text
 MedScan/
 ├── backend/
 │   ├── app/
-│   │   ├── core/          # Config, security, database
-│   │   ├── models/        # Pydantic/Beanie models
-│   │   ├── routers/       # API routes
-│   │   └── services/      # Business logic
-│   └── requirements.txt
+│   │   ├── core/          # Config, Security, JWT logic
+│   │   ├── models/        # Beanie ODM models (User, Report, ReportShare)
+│   │   ├── routers/       # Endpoints (auth, admin, doctor, reports, trends)
+│   │   └── services/      # LangChain agents (Extraction, Analysis, Summary)
+│   └── main.py
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/         # React pages
-│   │   ├── store/         # Redux store
-│   │   ├── services/      # API services
-│   │   └── theme.js       # MUI theme
-│   └── package.json
+│   │   ├── app/           # Next.js App Router (login, patient, doctor, admin, dev)
+│   │   ├── components/    # Reusable UI (StatusBadge, MetricChip, DataTable)
+│   │   └── lib/           # Utility functions (cn merger, formatters)
+│   ├── globals.css        # Precision Clinical design system variables
+│   └── middleware.ts      # Route protection validation
+├── screens/               # Visual UI documentation
 └── README.md
 ```
-
-## 🔗 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Register new user |
-| POST | `/auth/login` | Login user |
-| GET | `/auth/me` | Get current user |
-| POST | `/reports/upload` | Upload medical report |
-| GET | `/reports/` | Get user's reports |
-
-## 📝 License
-
-MIT License
 
 ## 👨‍💻 Author
 
 **Akarsh Ghildyal**
 
 ---
-
-Made with ❤️ for better healthcare understanding
+<div align="center">
+  <i>Engineered for better healthcare understanding</i>
+</div>

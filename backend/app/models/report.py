@@ -65,6 +65,8 @@ class Report(Document):
     # Timestamps
     upload_date: datetime = Field(default_factory=datetime.utcnow)
     analyzed_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[str] = None
 
     class Settings:
         name = "reports"

@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "read": {
+      "C:/Users/akars/OneDrive/Desktop/MessA/Dev/MedScan/.opencode/get-shit-done/*": "allow"
+    },
+    "external_directory": {
+      "C:/Users/akars/OneDrive/Desktop/MessA/Dev/MedScan/.opencode/get-shit-done/*": "allow"
+    }
+  }
+}

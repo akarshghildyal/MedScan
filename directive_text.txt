@@ -1,0 +1,365 @@
+
+
+MedScan
+UI / UX Rebuild Directive &amp; Design System Guide
+Version 2.0 · MVP Rebuild  · Covers: Visual Identity · Screen-by-Screen UX · PRD–AppFlow Gap Analysis · Build Prompt
+
+1.  Executive Summary
+MedScan&apos;s MVP functional foundation is solid. The AI pipeline, report upload, analysis, chatbot, and sharing flows all operate. However the current interface has three critical problems that must be resolved in the rebuild:
+
+Generic &quot;AI dashboard&quot; aesthetics — dark navy + scattered purple gradients with no intentional design system. The UI looks auto-generated rather than crafted.
+Broken information architecture — the welcome card consumes 40% of the viewport while the primary action (Upload) is relegated to a small corner card.
+PRD scope gaps — the Hospital Admin role (PRD Section 5) is fully specified but entirely absent from APP_FLOW and appears not to have been built. A failed-report retry mechanism is also missing.
+
+This document provides: a complete visual design system, screen-by-screen UI/UX specifications, the PRD vs APP_FLOW gap analysis, and a ready-to-paste AI build directive.
+
+2.  Visual Identity &amp; Design System
+2.1  Aesthetic Direction
+The target aesthetic is Precision Clinical — the visual language of high-end fintech applied to healthcare. Think Bloomberg Terminal meets Stripe Dashboard: data-dense but supremely legible, dark-mode-first, with a single electric accent that commands attention. Every design decision must communicate trust, accuracy, and calm authority.
+
+The three words that must describe every screen:
+Precise — tight grids, consistent spacing tokens, no decorative clutter
+Legible — information hierarchy is immediately obvious at a glance
+Clinical — serious, authoritative, not playful or consumer-app casual
+
+What to eliminate entirely:
+Purple gradients on welcome cards — meaningless decoration
+Scattered accent colours — teal is the only accent; everything else is neutral
+Rounded pill buttons everywhere — use sharp 4px radius for a precise feel
+Generic icon sets — use a single consistent icon library (Lucide or Phosphor)
+2.2  Colour Tokens
+
+--color-bg-base
+#0D1117  — Primary background. Near-black with blue undertone.
+--color-bg-surface
+#1C2333  — Card / panel surface.
+--color-bg-elevated
+#212B3E  — Modal, dropdown, tooltip surface.
+--color-border
+#2A3548  — All borders and dividers.
+--color-text-primary
+#E8EDF5  — Headings, important values.
+--color-text-body
+#C9D1E0  — Body copy, descriptions.
+--color-text-muted
+#6B7FA3  — Labels, metadata, timestamps.
+--color-accent
+#00C9A7  — THE single accent. Teal-green. Used for CTAs, active states, focus rings, chart lines. Nowhere else.
+--color-status-normal
+#22C55E  — Normal biomarker badge.
+--color-status-high
+#EF4444  — High biomarker badge.
+--color-status-low
+#F59E0B  — Low biomarker badge.
+--color-status-critical
+#FF2D55  — Critical badge. Pulsing glow animation.
+--color-status-processing
+#8B5CF6  — Processing state animation.
+
+Rule: No other colours are used. No additional gradients. The only gradient permitted is a subtle radial glow behind the accent CTA button (accent colour at 15% opacity).
+2.3  Typography
+
+Display / Hero
+Sora — Bold 700. Used for the MedScan wordmark, login hero, and section titles. Import from Google Fonts.
+Interface / Body
+DM Sans — Regular 400 and Medium 500. All body copy, labels, table data, form fields.
+Monospace / Data
+JetBrains Mono — Used exclusively for biomarker values, reference ranges, and the Dev JSON viewer.
+
+Type Scale (rem):
+Display: 2.5rem / 700 / Sora — page titles, login headline
+Heading 1: 1.75rem / 700 / Sora — section headers within pages
+Heading 2: 1.25rem / 600 / DM Sans — card titles, modal section labels
+Body: 0.9375rem / 400 / DM Sans — all descriptive text
+Label: 0.75rem / 500 / DM Sans — column headers, form labels (all-caps + 0.08em letter-spacing)
+Data: 0.875rem / 400 / JetBrains Mono — numerical values in tables
+Micro: 0.6875rem / 400 / DM Sans — timestamps, footnotes
+2.4  Spacing &amp; Layout
+Use an 8px base grid. All spacing values must be multiples of 8: 4, 8, 12, 16, 24, 32, 48, 64, 96px. No arbitrary pixel values.
+
+Page horizontal padding: 48px on desktop, 20px on mobile
+Card internal padding: 24px
+Table row height: 52px minimum
+Modal max-width: 720px (analysis drawer: full-height right-side panel, 640px wide)
+Form field height: 44px
+Border radius: 6px cards, 4px buttons/badges, 2px inputs
+2.5  Motion &amp; Micro-interactions
+All transitions use ease-out at 150–200ms. No bounce, no spring, no playful physics. Exceptions:
+
+Processing status badge: linear shimmer animation, 1.5s loop
+CRITICAL badge: radial pulse glow, 2s loop, --color-status-critical at 30% opacity
+Upload drag-zone: border color transitions to accent on hover/drag-over
+Page load: staggered fade-up on dashboard cards, 60ms delay between items
+Modal/drawer open: slides in from right at 200ms ease-out, backdrop fades in at 150ms
+
+3.  Screen-by-Screen UI/UX Specifications
+3.1  Login &amp; Registration
+Current Problems
+Centred card on blurred background — generic and forgettable
+No split-panel or context about what MedScan does
+Icon logo (purple briefcase) is clipart-level — no brand identity
+Input fields have no visible border — low affordance
+No focus states, no field validation indicators
+Required Changes
+Implement a 50/50 split layout: left panel = brand context, right panel = form
+Left panel: --color-bg-surface background with subtle dot-grid texture overlay (2px dots, 24px grid, --color-border at 40% opacity). Contains MedScan wordmark in Sora, a tagline (&quot;Your pathology reports, understood.&quot;), and three icon+text feature callouts: AI Analysis in ~15s / Biomarker Trend Tracking / Secure Doctor Sharing
+Right panel: --color-bg-base background. Form is centered vertically with 48px horizontal padding.
+Input fields: 1px solid --color-border, 44px height, 6px radius. On focus: border transitions to --color-accent, box-shadow: 0 0 0 3px rgba(0,201,167,0.15)
+Sign In button: full width, --color-accent background (#00C9A7), --color-ink text (#0D1117), bold. Hover: brightness 110%. No gradient.
+Replace icon logo with Sora bold wordmark &quot;MedScan&quot; + a minimal ECG-line underline as the brand mark
+Registration form adds: Full Name, Email, Password, Biological Sex (select), Date of Birth — same clean layout
+Add inline field validation: red border + error message below field on blur if invalid
+3.2  Patient Dashboard
+Current Problems
+Welcome card takes ~40% of viewport — wasteful
+Upload CTA is a small isolated card — primary action is visually demoted
+Table filename column shows AI summary text instead of actual filename
+FAILED rows have no retry affordance
+Action icons (share, chat) are unlabelled — poor discoverability
+No empty state for new users with zero reports
+No real health insight metrics visible above the fold
+Required Changes — Top Bar
+Replace the large welcome card with a compact 2-row top section: Row 1 = &quot;Welcome back, [Name]&quot; in Heading 1 style + a refresh icon button. Row 2 = three stat chips in a row: Total Reports (number), Last Upload (relative date), Abnormal Markers Found (sum across all reports, in --color-status-high if &gt;0). Each chip is a small --color-bg-surface card, 120px wide, with a label and value.
+Required Changes — Upload CTA
+Place a full-width Upload Strip below the stat chips: --color-bg-surface background, 1px dashed --color-border, 1.5px dashed --color-accent on hover. Left side: cloud-upload icon + &quot;Upload Pathology Report&quot; in Heading 2 + &quot;PDF format only · AI analysis in ~15 seconds&quot; in muted body text. Right side: a prominent &quot;Upload PDF&quot; button (accent colour). The dashed border signals drag-and-drop capability.
+On drag-over: entire strip border becomes solid --color-accent, background shifts to rgba(0,201,167,0.04)
+Required Changes — Report History Table
+Columns: Filename (actual PDF filename, truncated at 32 chars with tooltip), Type, Date Uploaded, Status, Summary Preview (small muted italic text, max 60 chars), Actions
+Row left-border treatment: 3px solid color-coded by status — green=ANALYZED, red=FAILED, amber=PROCESSING, purple=PROCESSING (animated shimmer on the border)
+PROCESSING rows: show a linear progress animation in the status cell; polling every 3 seconds
+FAILED rows: show red &quot;FAILED&quot; badge + a &quot;Retry&quot; button (ghost style, red border) in the Actions column
+Action buttons — replace bare icons with icon+label buttons: &quot;View&quot; (primary), &quot;Share&quot; (ghost), &quot;Chat&quot; (ghost). On narrow viewports collapse to icon-only with tooltips.
+Empty state (zero reports): centred illustration area with the MedScan mark, heading &quot;No reports yet&quot;, subtext &quot;Upload your first pathology PDF to get started&quot;, and a large Upload CTA button
+3.3  Report Analysis — Right Drawer (replaces Modal)
+Current Problems
+A modal is wrong for this volume of content — it creates scroll-trapping and feels cramped
+Summary and detailed explanation sections are not visually separated
+Trend chart access is a hidden icon — not discoverable
+No prominent Share CTA within the analysis view
+Required Changes
+Replace modal with a full-height right-side drawer: 640px wide on desktop, full-screen on mobile. Opens with slide-in-from-right animation. Backdrop dims to rgba(0,0,0,0.6).
+Drawer header: report filename + type badge + close button (X). Sticky at top.
+Section 1 — AI Summary: --color-bg-elevated card with a small &quot;sparkle&quot; icon and heading &quot;AI Summary&quot;. Body text in DM Sans 15px. Background tinted slightly lighter than base.
+Section 2 — Key Insights: card with amber left-border (4px). Bullet list of insights generated by the AI. Each bullet prefixed with a warning triangle icon in --color-amber.
+Section 3 — Extracted Values: full-width table within the drawer. Columns: Marker Name, Value (JetBrains Mono), Unit, Reference Range (JetBrains Mono, muted), Status badge. Add a small sparkline inline with each numeric row (last 3 values as a tiny 40px wide SVG line). Clicking the sparkline opens the full Trend Modal.
+Status badges: pill shaped, 4px radius. NORMAL=green bg at 15% opacity + green text. HIGH=red bg 15%+red text. LOW=amber bg 15%+amber text. CRITICAL=red bg 20%+red text+pulsing glow animation.
+Section 4 — Detailed Explanation: collapsible accordion. Collapsed by default to avoid overwhelming patients. Expand icon + &quot;Read full clinical explanation&quot; label.
+Drawer footer (sticky): &quot;Share with Doctor&quot; button (accent, full width) + &quot;Download PDF&quot; ghost button
+3.4  Trend Visualization
+Required Changes
+Opens as a secondary modal overlaid on the analysis drawer (z-index layer above drawer)
+Chart type: line chart using Recharts. Dark background matching --color-bg-elevated. Single line in --color-accent. X-axis = report dates, Y-axis = value. Reference range shown as a horizontal band (green fill at 8% opacity between min and max).
+Show data point dots on hover with a tooltip: date + exact value + status badge
+If only one data point exists: show a message &quot;Upload more reports to see trends&quot; below a single-point chart
+Modal header: &quot;[Marker Name] over time&quot; + unit in muted text
+3.5  Chatbot
+Current Problems
+Empty state is a gray box — no guidance on what to ask
+No message bubble UI — messages would appear in an unstructured way
+No disclaimer that the AI is not providing medical diagnosis
+Send button is small and isolated
+Required Changes
+Empty state: show three suggested question pills centered in the chat area: &quot;What does my high WBC mean?&quot; / &quot;Is my hemoglobin within normal range?&quot; / &quot;Should I be concerned about these results?&quot; — clicking a pill populates the input.
+Message bubbles: patient messages right-aligned, --color-accent at 20% opacity background, --color-text-primary text. AI responses left-aligned, --color-bg-elevated background, with a small MedScan icon avatar. Timestamps below each bubble in micro style.
+Add a sticky disclaimer chip at the top of the chat area: warning-icon + &quot;AI-powered insights · Not a substitute for medical advice&quot; in muted text, 11px.
+Input area: full-width text input (44px height) + Send button fused to right edge (accent background, arrow-right icon). Pressing Enter sends the message.
+Show a typing indicator (three animated dots) while the AI is generating a response
+3.6  Share Report Modal
+Required Changes
+A small centered modal is appropriate here (400px wide)
+Heading: &quot;Share with a Doctor&quot; + close button
+Input: Doctor ID field with placeholder &quot;Enter Doctor&apos;s ID&quot;
+Below input: add a note in muted text — &quot;The doctor will have read-only access to this report and its AI analysis&quot;
+Submit button: full width, accent colour. Disabled until a non-empty value is entered.
+Success state: replace modal content with a green checkmark + &quot;Report shared successfully&quot; message + Close button
+Error state: show red inline error below the input field
+3.7  Doctor Dashboard
+Current Problems
+Likely visually identical to the patient dashboard — wrong. The doctor role needs a distinct clinical interface.
+Required Changes
+Remove the Upload CTA entirely — doctors do not upload reports
+Header stat chips: Total Shared Reports, Reports with Critical Markers (red if &gt;0), Reports Pending Review
+Table columns: Patient Name, Patient ID, Report Type, Date Shared, Markers Flagged (count + highest severity badge), Actions
+Priority indicator: rows with CRITICAL markers get a red 3px left-border and a &quot;CRITICAL&quot; badge in the Markers Flagged cell
+Sort order: critical reports first by default, then by most recently shared
+Clinical Review drawer: same structure as patient analysis drawer but without the Share CTA in the footer. Replace with &quot;Mark as Reviewed&quot; button (ghost, green) that records a doctor review timestamp.
+
+4.  PRD vs APP–FLOW Gap Analysis
+The table below cross-references every feature in the PRD (v1) against its presence in APP_FLOW.md. Features marked MISSING were specified in the PRD but do not appear in APP_FLOW — they require explicit implementation.
+
+FEATURE
+PRD REF
+STATUS
+ACTION REQUIRED
+Hospital Admin Role — Add/remove patients &amp; doctors
+PRD §5
+MISSING
+Build /admin route with user management table. Add patient (name, email, hospital_id), add doctor, assign doctor to patient. Role-gated: admin JWT only.
+Hospital Admin — Assign doctors to patients
+PRD §5
+MISSING
+POST /admin/assign endpoint. Admin dashboard shows assignment matrix.
+PROCESSING status badge with live polling
+PRD §8
+PRESENT
+No action — implemented per APP_FLOW.
+FAILED report retry button
+PRD §8 (implied)
+MISSING
+Add retry icon/button on FAILED rows. Calls POST /reports/{id}/retry to re-trigger pipeline.
+Trend chart — per-marker sparklines
+PRD §8
+PARTIAL
+APP_FLOW describes chart icon only. Add inline sparklines in the values table.
+Chatbot suggested questions
+PRD §8
+MISSING
+UI addition: show 3 pill buttons as empty-state prompts in chat modal.
+Share with external doctors (outside hospital)
+PRD §8
+PARTIAL
+APP_FLOW only describes sharing by Doctor ID. Confirm external doctor sharing is supported by backend. Add UI note about external vs internal.
+Doctor — Mark as Reviewed action
+PRD §7
+MISSING
+Add PATCH /doctor/reports/{id}/review endpoint. Update Doctor dashboard with review status column.
+Dev / JSON debug view
+Not in PRD
+ADDED
+APP_FLOW addition. Acceptable for MVP. Ensure it is role-gated to dev role only.
+Report type auto-classification
+PRD §4
+PRESENT
+AI pipeline classifies type. No action.
+Inline biomarker detail explanation
+PRD §8
+PARTIAL
+Detailed Explanation is generated but UI collapses it. Add collapsible accordion as specified in §3.3.
+
+Priority order for gap resolution: (1) Hospital Admin Role — highest PRD priority, most user-visible gap. (2) Failed report retry — blocks user recovery flow. (3) Doctor Mark as Reviewed — completes the doctor journey. (4) Chatbot suggested questions — low effort, high UX value. (5) External doctor sharing confirmation.
+
+5.  Reusable Component Specifications
+5.1  StatusBadge
+Props: status (&quot;NORMAL&quot; | &quot;HIGH&quot; | &quot;LOW&quot; | &quot;CRITICAL&quot; | &quot;PROCESSING&quot; | &quot;ANALYZED&quot; | &quot;FAILED&quot;)
+Renders a pill with 4px border-radius, 6px 12px padding, 11px bold DM Sans text
+Color map: NORMAL=green, HIGH=red, LOW=amber, CRITICAL=red+pulse, PROCESSING=purple+shimmer, ANALYZED=teal, FAILED=red outline only
+CRITICAL adds: box-shadow 0 0 8px rgba(255,45,85,0.4) with a 2s pulse keyframe animation
+5.2  MetricChip
+Props: label (string), value (string | number), variant (&quot;default&quot; | &quot;warning&quot; | &quot;danger&quot;)
+120px min-width card, --color-bg-surface background, 6px radius, 16px padding
+Label: 10px all-caps --color-text-muted. Value: 22px bold --color-text-primary (or status color if variant set)
+5.3  UploadStrip
+Full-width dashed-border zone. Handles both click-to-browse and drag-and-drop.
+States: idle / hover / drag-over / uploading (progress bar) / success
+Shows filename and file size once a file is selected, with a remove (X) button
+Only accepts .pdf; shows inline error for other file types
+5.4  DataTable
+Props: columns (array), rows (array), loading (bool), emptyState (ReactNode)
+Header row: --color-bg-elevated, all-caps label style, sticky on scroll
+Row hover: background shifts to rgba(255,255,255,0.02)
+Supports left-border color injection per row via a rowVariant prop
+Loading state: skeleton shimmer rows (3 animated placeholder rows)
+5.5  RightDrawer
+Props: open (bool), onClose (fn), title (string), children (ReactNode), footer (ReactNode)
+640px fixed width, full viewport height, right-anchored
+Header: sticky, --color-bg-elevated, 1px bottom border, title + close X button
+Footer: sticky, --color-bg-elevated, 1px top border, slot for action buttons
+Backdrop: fixed overlay, rgba(0,0,0,0.6), click to close
+Animation: transform translateX(100%) to translateX(0) in 200ms ease-out
+
+6.  AI Build Directive — Ready-to-Use Prompt
+Copy the following prompt in its entirety when instructing an AI coding agent to rebuild the MedScan frontend. Every specification in this document is encoded within it.
+
+SYSTEM CONTEXT
+You are rebuilding the frontend of MedScan, an AI-powered pathology report analysis platform. The backend (FastAPI + MongoDB) is already built and working. Your task is to deliver a production-grade React/Next.js frontend that matches the design system and UX specifications below with pixel-precise fidelity. Do not deviate from the colour tokens, typography, or component behaviour described.
+
+DESIGN SYSTEM
+Aesthetic: Precision Clinical — dark mode, minimal, data-dense. Inspired by Bloomberg Terminal + Stripe Dashboard.
+Background: #0D1117. Surface: #1C2333. Elevated: #212B3E. Border: #2A3548.
+Text: Primary #E8EDF5, Body #C9D1E0, Muted #6B7FA3.
+Single accent colour: #00C9A7 (teal). Used ONLY for CTAs, active borders, chart lines, focus rings. No other accent colours anywhere.
+Status colours: Normal #22C55E, High #EF4444, Low #F59E0B, Critical #FF2D55 (pulsing glow), Processing #8B5CF6 (shimmer).
+Fonts: Sora (display/headings, from Google Fonts), DM Sans (body/UI), JetBrains Mono (numeric values/data). Import all three.
+Spacing: 8px base grid. All values multiples of 8. Border-radius: 6px cards, 4px buttons/badges, 2px inputs.
+Motion: ease-out 150–200ms for all transitions. No bounce or spring. CRITICAL badge pulses at 2s. Processing shimmer at 1.5s.
+
+SCREENS TO BUILD
+1. LOGIN PAGE (/login): 50/50 split layout. Left panel: dot-grid texture, MedScan Sora wordmark, tagline &quot;Your pathology reports, understood.&quot;, three feature callouts (AI Analysis in ~15s, Biomarker Trend Tracking, Secure Doctor Sharing). Right panel: form with Email + Password fields (1px border, focus ring in #00C9A7 at 15% opacity), full-width Sign In button (#00C9A7 background, #0D1117 text, no gradient). &quot;Don&apos;t have an account? Sign Up&quot; link below. Registration form adds Full Name, Biological Sex, Date of Birth with inline validation.
+
+2. PATIENT DASHBOARD (/patient): Compact top section with &quot;Welcome back, [Name]&quot; heading + three MetricChip components (Total Reports, Last Upload date, Abnormal Markers count). Below: full-width UploadStrip with dashed border that becomes solid #00C9A7 on drag-over, containing upload icon + &quot;Upload Pathology Report&quot; text + &quot;AI analysis in ~15 seconds&quot; subtext + Upload PDF button. Then: DataTable with columns Filename (actual PDF name, 32 char truncate with tooltip), Type, Date Uploaded, Status (StatusBadge), Summary Preview (muted italic, 60 chars), Actions (View button + Share icon + Chat icon). Row left-border: green=ANALYZED, red=FAILED, amber/shimmer=PROCESSING. FAILED rows show Retry button. Empty state: centered MedScan mark + &quot;No reports yet&quot; + Upload CTA. Page-load: staggered fade-up on all cards at 60ms intervals.
+
+3. REPORT ANALYSIS DRAWER: Full-height right drawer, 640px wide, slide-in 200ms. Header: filename + type badge + X. Section 1: AI Summary card (slightly lighter surface). Section 2: Key Insights card with 4px amber left-border, bulleted list with warning-triangle icons. Section 3: Extracted Values table with columns Marker, Value (JetBrains Mono), Unit, Range (JetBrains Mono muted), Status (StatusBadge), Trend (40px inline sparkline SVG — clicking opens Trend Modal). Section 4: Detailed Explanation in collapsible accordion (collapsed by default, &quot;Read full clinical explanation&quot; label). Footer: &quot;Share with Doctor&quot; full-width accent button + &quot;Download PDF&quot; ghost button.
+
+4. TREND MODAL: Opens above the drawer. Line chart (Recharts), #00C9A7 line, reference range as green-fill band (8% opacity), dark #212B3E background. Hover tooltips with date + value + StatusBadge. Title &quot;[Marker Name] over time · [unit]&quot;. If 1 data point: show &quot;Upload more reports to see trends&quot; message.
+
+5. CHATBOT MODAL: 640px wide centered modal. Sticky disclaimer: warning icon + &quot;AI-powered insights · Not a substitute for medical advice&quot; in muted 11px text. Empty state: three suggested question pills (&quot;What does my high WBC mean?&quot;, &quot;Is my hemoglobin normal?&quot;, &quot;Should I be concerned?&quot;). Patient messages: right-aligned, #00C9A7 at 20% opacity bg. AI messages: left-aligned, #212B3E bg + MedScan icon avatar. Typing indicator: three animated dots. Input: 44px field + fused Send button (accent, arrow icon). Enter to send.
+
+6. SHARE MODAL: 400px centered modal. Doctor ID input field. Muted note: &quot;Read-only access will be granted.&quot; Submit button disabled until non-empty. Success state: green checkmark + &quot;Report shared successfully&quot;. Error state: red inline error.
+
+7. DOCTOR DASHBOARD (/doctor): No upload strip. Header stats: Total Shared Reports, Critical Reports (red if &gt;0), Pending Review. Table columns: Patient Name, Patient ID, Type, Date Shared, Markers Flagged (count + highest severity badge), Actions (View Details). Rows with CRITICAL markers: 3px red left-border + CRITICAL badge. Default sort: critical first, then most recent. Clinical Review drawer identical to patient analysis drawer but footer has &quot;Mark as Reviewed&quot; ghost-green button instead of Share CTA.
+
+8. HOSPITAL ADMIN DASHBOARD (/admin): [THIS IS A PRD REQUIREMENT CURRENTLY MISSING FROM THE BUILD] Header stats: Total Patients, Total Doctors, Active Assignments. Two-tab interface: Patients tab and Doctors tab. Each tab shows a DataTable. Patients tab columns: Name, Email, Assigned Doctors, Actions (Edit, Remove). Doctors tab columns: Name, Email, Hospital ID, Assigned Patients, Actions. &quot;Add Patient&quot; and &quot;Add Doctor&quot; buttons open respective modals with form fields matching the Patients and Doctors collections in MongoDB. An &quot;Assign Doctor&quot; modal allows selecting a patient + doctor from dropdowns to create an assignment. All admin actions call the appropriate FastAPI endpoints with admin-role JWT.
+
+9. DEV DASHBOARD (/dev): Minimal. File uploader + report history table. &quot;View Raw JSON&quot; button opens a modal with a JSON Tree viewer component showing the full pipeline output document.
+
+COMPONENT LIBRARY
+Build the following reusable components before building any pages: StatusBadge (props: status), MetricChip (props: label, value, variant), UploadStrip (handles drag-drop + click, .pdf only, shows progress), DataTable (props: columns, rows, loading, emptyState — includes skeleton shimmer loading state), RightDrawer (props: open, onClose, title, children, footer — 640px, full-height, slide-in animation), SuggestedQuestionPill (clickable pill that populates chat input).
+
+TECHNICAL REQUIREMENTS
+Framework: React + Next.js (App Router). Styling: CSS Modules or Tailwind with custom design tokens — no inline styles, no styled-components. Charts: Recharts. Icons: Lucide React (consistent throughout). Fonts: loaded via next/font from Google Fonts. State: React useState/useContext for UI state, SWR or React Query for API data fetching with polling support. Auth: JWT stored in httpOnly cookie (not localStorage). Routes protected by middleware.js redirect. Role-based routing: /patient, /doctor, /admin, /dev each require matching JWT role.
+
+WHAT NOT TO DO
+Do NOT use purple gradients anywhere on the page
+Do NOT use Inter, Roboto, Arial, or system fonts
+Do NOT use more than one accent colour (#00C9A7)
+Do NOT use modals for the Report Analysis view — use the RightDrawer component
+Do NOT show AI summary text in the Filename column of any table
+Do NOT leave FAILED rows without a Retry button
+Do NOT skip building the /admin route — it is a PRD requirement
+Do NOT use localStorage for auth tokens
+Do NOT use percentage-based widths in tables — use fixed pixel values
+
+7.  Acceptance Criteria
+The rebuild is considered complete when ALL of the following pass:
+
+1
+Design System Conformance
+All three fonts (Sora, DM Sans, JetBrains Mono) load correctly. Only #00C9A7 appears as an accent. No purple gradients exist anywhere. All spacing is on the 8px grid.
+
+2
+Login Split Layout
+50/50 split renders correctly on 1280px+ screens. Input focus shows teal ring. Form validation shows inline errors.
+
+3
+Dashboard Information Architecture
+Welcome card is compact (max 120px height). Upload strip is full-width and drag-drop functional. Filename column shows actual PDF name not summary.
+
+4
+FAILED Row Retry
+FAILED status rows display a Retry button. Clicking it re-calls the pipeline endpoint.
+
+5
+Analysis Right Drawer
+Report analysis opens in a right-side drawer, not a modal. All four sections render. Sparklines appear in the values table.
+
+6
+CRITICAL Badge Animation
+Markers with CRITICAL status show a visible pulse-glow animation. The animation loops continuously.
+
+7
+Chatbot UX
+Empty state shows three suggested question pills. Messages render in distinct bubbles. Typing indicator appears while waiting for AI response.
+
+8
+Doctor Dashboard Distinction
+No upload strip on /doctor. Critical-marker rows have red left-border. Mark as Reviewed button present in drawer footer.
+
+9
+Hospital Admin Dashboard
+/admin route exists and is accessible to admin-role JWTs only. Add Patient, Add Doctor, and Assign Doctor flows all function end-to-end.
+
+10
+Empty States
+New patient accounts with zero reports see an illustrated empty state with Upload CTA, not an empty table.
+
+MedScan UI/UX Rebuild Directive  ·  Version 2.0  ·  All rights reserved

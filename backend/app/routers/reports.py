@@ -176,3 +176,40 @@ async def get_report(
         raise HTTPException(status_code=403, detail="Not authorized to view this report")
     
     return ReportDetailOut.from_report(report)
+
+@router.post("/{report_id}/retry", response_model=ReportOut)
+async def retry_report_pipeline(
+    report_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """Retry the AI pipeline processing for a failed report."""
+    try:
+        report = await Report.get(PydanticObjectId(report_id))
+    except:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    if report.user_id != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not authorized to retry this report")
+        
+    if report.status != ReportStatus.FAILED:
+        raise HTTPException(status_code=400, detail="Only failed reports can be retried")
+        
+    if not report.file_url:
+        raise HTTPException(status_code=400, detail="Report PDF file is missing")
+        
+    # Reset status
+    report.status = ReportStatus.PROCESSING
+    await report.save()
+    
+    # Trigger pipeline
+    background_tasks.add_task(
+        run_pipeline,
+        report_id=str(report.id),
+        file_path=report.file_url
+    )
+    
+    return ReportOut.from_report(report)
