@@ -58,26 +58,35 @@ class LLMClient:
             payload["response_format"] = response_format
         
         async with httpx.AsyncClient(timeout=60.0) as client:
-            try:
-                response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    headers=self.headers,
-                    json=payload
-                )
-                response.raise_for_status()
-                data = response.json()
-                
-                return {
-                    "content": data["choices"][0]["message"]["content"],
-                    "model": data.get("model", model),
-                    "usage": data.get("usage", {})
-                }
-            except httpx.HTTPStatusError as e:
-                raise LLMError(f"HTTP error: {e.response.status_code} - {e.response.text}")
-            except httpx.RequestError as e:
-                raise LLMError(f"Request error: {str(e)}")
-            except (KeyError, IndexError) as e:
-                raise LLMError(f"Unexpected response format: {str(e)}")
+            last_error = None
+            for attempt in range(3):
+                try:
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=self.headers,
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    
+                    return {
+                        "content": data["choices"][0]["message"]["content"],
+                        "model": data.get("model", model),
+                        "usage": data.get("usage", {})
+                    }
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 429 and attempt < 2:
+                        import asyncio
+                        wait = (attempt + 1) * 3  # 3s, 6s
+                        await asyncio.sleep(wait)
+                        last_error = e
+                        continue
+                    raise LLMError(f"HTTP error: {e.response.status_code} - {e.response.text}")
+                except httpx.RequestError as e:
+                    raise LLMError(f"Request error: {str(e)}")
+                except (KeyError, IndexError) as e:
+                    raise LLMError(f"Unexpected response format: {str(e)}")
+            raise LLMError(f"Rate limited after 3 retries: {last_error}")
     
     async def chat_with_image(
         self,

@@ -7,8 +7,9 @@ from datetime import datetime, date
 
 class UserRole(str, Enum):
     """User roles for role-based access control."""
-    HOSPITAL = "hospital"
     PATIENT = "patient"
+    DOCTOR = "doctor"
+    HOSPITAL = "hospital"
 
 
 class User(Document):
@@ -18,6 +19,7 @@ class User(Document):
     role: UserRole = UserRole.PATIENT
     full_name: Optional[str] = None
     is_active: bool = True
+    hospital_id: Optional[str] = None  # Links doctors/patients to a hospital
     created_at: datetime = Field(default_factory=datetime.utcnow)
     # Patient-specific fields
     dob: Optional[date] = None

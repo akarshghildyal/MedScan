@@ -2,8 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useSelector } from 'react-redux';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import HospitalDashboard from './pages/HospitalDashboard';
+import DoctorDashboard from './pages/DoctorDashboard';
 import PatientDashboard from './pages/PatientDashboard';
+import DevDashboard from './pages/DevDashboard';
 
 function ProtectedRoute({ children, allowedRole }) {
   const { token, user } = useSelector((state) => state.auth);
@@ -13,7 +14,7 @@ function ProtectedRoute({ children, allowedRole }) {
   }
 
   if (allowedRole && user?.role !== allowedRole) {
-    return <Navigate to={user?.role === 'hospital' ? '/hospital' : '/patient'} replace />;
+    return <Navigate to={user?.role === 'doctor' ? '/doctor' : '/patient'} replace />;
   }
 
   return children;
@@ -24,7 +25,7 @@ function App() {
 
   const getHomeRedirect = () => {
     if (!token) return '/login';
-    return user?.role === 'hospital' ? '/hospital' : '/patient';
+    return user?.role === 'doctor' ? '/doctor' : '/patient';
   };
 
   return (
@@ -32,11 +33,12 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/dev" element={<DevDashboard />} />
         <Route
-          path="/hospital"
+          path="/doctor"
           element={
-            <ProtectedRoute allowedRole="hospital">
-              <HospitalDashboard />
+            <ProtectedRoute allowedRole="doctor">
+              <DoctorDashboard />
             </ProtectedRoute>
           }
         />

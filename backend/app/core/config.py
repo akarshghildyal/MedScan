@@ -22,10 +22,10 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     
-    # Model configurations per agent (using free models)
-    LLM_MODEL_VISION: str = "google/gemini-2.0-flash-exp:free"  # For Document Analyzer
-    LLM_MODEL_REASONING: str = "google/gemini-2.0-flash-exp:free"  # For In-Depth Analyzer
-    LLM_MODEL_FAST: str = "meta-llama/llama-3.1-8b-instruct:free"  # For Screener, Summary, etc.
+    # Model configurations per agent (uses your API key credits)
+    LLM_MODEL_VISION: str = "arcee-ai/trinity-large-preview:free"  # For vision tasks
+    LLM_MODEL_REASONING: str = "arcee-ai/trinity-large-preview:free"  # For Data Extractor, Explanation
+    LLM_MODEL_FAST: str = "arcee-ai/trinity-large-preview:free"  # For Classifier, Insights, Summary
 
     model_config = {
         "env_file": ".env",

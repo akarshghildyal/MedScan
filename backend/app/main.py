@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db import init_db
-from app.routers import auth, reports
+from app.routers import auth, reports, chat, trends, sharing, doctor
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,8 +25,24 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+# Auth
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
+
+# Reports
 app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"])
+
+# Report Sharing (nested under /reports)
+app.include_router(sharing.router, prefix=f"{settings.API_V1_STR}/reports", tags=["sharing"])
+
+# Trends
+app.include_router(trends.router, prefix=f"{settings.API_V1_STR}/trends", tags=["trends"])
+
+# Chat
+app.include_router(chat.router, prefix=f"{settings.API_V1_STR}/chat", tags=["chat"])
+
+# Doctor
+app.include_router(doctor.router, prefix=f"{settings.API_V1_STR}/doctor", tags=["doctor"])
+
 
 @app.get("/")
 async def root():
