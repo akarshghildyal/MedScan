@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from app.models.user import User, UserRole
 from app.models.report import Report, ReportDetailOut
 from app.models.share import ReportShare
+from app.models.assignment import Assignment
 from app.core.security import get_current_user
 
 import logging
@@ -19,6 +20,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class AssignedPatientSummary(BaseModel):
+    patient_id: str
+    patient_name: str
+    patient_email: str
+    assigned_at: str
+    report_count: int = 0
 
 
 class DoctorReportSummary(BaseModel):
@@ -31,6 +40,43 @@ class DoctorReportSummary(BaseModel):
     highest_severity: str = "NORMAL"
     is_reviewed: bool = False
     date_shared: str
+
+
+@router.get("/patients", response_model=List[AssignedPatientSummary])
+async def get_assigned_patients(
+    current_user: User = Depends(get_current_user)
+):
+    """Get all patients assigned to the authenticated doctor."""
+    if current_user.role != UserRole.DOCTOR:
+        raise HTTPException(status_code=403, detail="Doctor access required")
+    
+    assignments = await Assignment.find(
+        Assignment.doctor_id == str(current_user.id)
+    ).to_list()
+    
+    results = []
+    for a in assignments:
+        try:
+            patient = await User.get(PydanticObjectId(a.patient_id))
+            if not patient:
+                continue
+            
+            # Count reports for this patient
+            report_count = await Report.find(
+                Report.user_id == str(patient.id)
+            ).count()
+            
+            results.append(AssignedPatientSummary(
+                patient_id=str(patient.id),
+                patient_name=patient.full_name or patient.email,
+                patient_email=patient.email,
+                assigned_at=a.assigned_at.isoformat(),
+                report_count=report_count
+            ))
+        except Exception as e:
+            logger.warning(f"Error loading assigned patient {a.patient_id}: {e}")
+    
+    return results
 
 
 @router.get("/reports", response_model=List[DoctorReportSummary])

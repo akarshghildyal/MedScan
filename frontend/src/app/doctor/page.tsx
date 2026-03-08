@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, Users } from 'lucide-react';
 import { MetricChip } from '@/components/ui/MetricChip';
 import { DataTable, Column, RowVariant } from '@/components/ui/DataTable';
 import { StatusBadge, StatusType } from '@/components/ui/StatusBadge';
@@ -22,6 +22,14 @@ interface DoctorReportRow {
     isReviewed: boolean;
 }
 
+interface AssignedPatient {
+    patientId: string;
+    patientName: string;
+    patientEmail: string;
+    assignedAt: string;
+    reportCount: number;
+}
+
 const mockTrendData = [
     { date: '2024-01', value: 6.2, status: 'NORMAL' as const },
     { date: '2024-04', value: 7.1, status: 'NORMAL' as const },
@@ -32,9 +40,11 @@ const mockTrendData = [
 export default function DoctorDashboard() {
     const router = useRouter();
     const [reports, setReports] = useState<DoctorReportRow[]>([]);
+    const [assignedPatients, setAssignedPatients] = useState<AssignedPatient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isTrendOpen, setIsTrendOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'patients' | 'reports'>('patients');
 
     const [activeReport, setActiveReport] = useState<DoctorReportRow | null>(null);
     const [activeTrendMarker, setActiveTrendMarker] = useState('');
@@ -49,8 +59,12 @@ export default function DoctorDashboard() {
 
         try {
             setIsLoading(true);
-            const data = await fetchApi('/doctor/reports');
-            const mappedReports: DoctorReportRow[] = data.map((r: any) => ({
+            const [reportsData, patientsData] = await Promise.all([
+                fetchApi('/doctor/reports'),
+                fetchApi('/doctor/patients')
+            ]);
+
+            const mappedReports: DoctorReportRow[] = reportsData.map((r: any) => ({
                 id: r.report_id,
                 patientName: r.patient_name,
                 patientId: r.patient_id,
@@ -61,8 +75,17 @@ export default function DoctorDashboard() {
                 isReviewed: r.is_reviewed
             }));
             setReports(mappedReports);
+
+            const mappedPatients: AssignedPatient[] = patientsData.map((p: any) => ({
+                patientId: p.patient_id,
+                patientName: p.patient_name,
+                patientEmail: p.patient_email,
+                assignedAt: new Date(p.assigned_at).toLocaleDateString(),
+                reportCount: p.report_count
+            }));
+            setAssignedPatients(mappedPatients);
         } catch (error: any) {
-            console.error('Error fetching reports:', error);
+            console.error('Error fetching data:', error);
             if (error.message?.includes('access required') || error.message?.includes('Not authenticated')) {
                 router.push('/login');
             }
@@ -75,13 +98,12 @@ export default function DoctorDashboard() {
         loadData();
     }, []);
 
-    // Default Sort: Critical first, then most recently shared
+    // Default Sort: Critical first
     const sortedReports = useMemo(() => {
         return [...reports].sort((a, b) => {
             if (a.highestSeverity === 'CRITICAL' && b.highestSeverity !== 'CRITICAL') return -1;
             if (b.highestSeverity === 'CRITICAL' && a.highestSeverity !== 'CRITICAL') return 1;
-            // In a real app we would use actual timestamp comparison for dateShared
-            return 0; // Keeping original order for demo
+            return 0;
         });
     }, [reports]);
 
@@ -106,9 +128,8 @@ export default function DoctorDashboard() {
         setIsDrawerOpen(false);
     };
 
-    const columns: Column<DoctorReportRow>[] = [
+    const reportColumns: Column<DoctorReportRow>[] = [
         { key: 'patientName', header: 'Patient Name', render: (row) => <span className="font-bold text-text-primary">{row.patientName}</span> },
-        { key: 'patientId', header: 'Patient ID', render: (row) => <span className="font-mono text-text-muted">{row.patientId}</span> },
         { key: 'type', header: 'Report Type', render: (row) => <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-text-body">{row.type}</span> },
         { key: 'dateShared', header: 'Date Shared' },
         {
@@ -140,6 +161,13 @@ export default function DoctorDashboard() {
         },
     ];
 
+    const patientColumns: Column<AssignedPatient>[] = [
+        { key: 'patientName', header: 'Patient Name', render: (row) => <span className="font-bold text-text-primary">{row.patientName}</span> },
+        { key: 'patientEmail', header: 'Email', render: (row) => <span className="text-text-muted">{row.patientEmail}</span> },
+        { key: 'assignedAt', header: 'Assigned On' },
+        { key: 'reportCount', header: 'Reports', render: (row) => <span className="font-mono text-text-muted">{row.reportCount}</span> },
+    ];
+
     return (
         <div className="min-h-screen bg-bg-base text-text-body flex flex-col">
 
@@ -166,50 +194,85 @@ export default function DoctorDashboard() {
                         <div>
                             <div className="flex items-center gap-4 mb-1">
                                 <h1 className="font-sora text-[28px] font-bold text-text-primary">
-                                    Dr. Smith Dashboard
+                                    Doctor Dashboard
                                 </h1>
                             </div>
-                            <p className="text-text-muted">Clinical review and analysis queue</p>
+                            <p className="text-text-muted">Manage assigned patients and review shared reports</p>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4">
-                            <MetricChip label="Total Shared" value={reports.length} />
-                            <MetricChip label="Critical Reports" value={criticalCount} variant={criticalCount > 0 ? "danger" : "default"} />
+                            <MetricChip label="Assigned Patients" value={assignedPatients.length} />
+                            <MetricChip label="Shared Reports" value={reports.length} />
+                            <MetricChip label="Critical" value={criticalCount} variant={criticalCount > 0 ? "danger" : "default"} />
                             <MetricChip label="Pending Review" value={pendingCount} variant={pendingCount > 0 ? "warning" : "default"} />
                         </div>
                     </div>
 
-                    {/* History Table */}
-                    <div className="animate-fade-up flex flex-col gap-4" style={{ animationDelay: '60ms' }}>
-                        <h2 className="font-sora text-[20px] font-bold text-text-primary mt-4">
-                            Patient Queue
-                        </h2>
+                    {/* Tab Nav */}
+                    <div className="flex items-center border-b border-border pb-4">
+                        <div className="flex gap-6">
+                            <button
+                                onClick={() => setActiveTab('patients')}
+                                className={`font-sora text-[15px] font-bold pb-[18px] -mb-[18px] border-b-[2px] transition-colors ${activeTab === 'patients' ? 'text-accent border-accent' : 'text-text-muted border-transparent hover:text-text-primary'}`}
+                            >
+                                <span className="flex items-center gap-2"><Users className="h-4 w-4" /> Assigned Patients</span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('reports')}
+                                className={`font-sora text-[15px] font-bold pb-[18px] -mb-[18px] border-b-[2px] transition-colors ${activeTab === 'reports' ? 'text-accent border-accent' : 'text-text-muted border-transparent hover:text-text-primary'}`}
+                            >
+                                <span className="flex items-center gap-2"><Activity className="h-4 w-4" /> Shared Reports</span>
+                            </button>
+                        </div>
+                    </div>
 
-                        {reports.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center p-12 bg-bg-surface rounded-[6px] border border-border">
-                                <div className="h-[2px] w-[60px] bg-accent mb-6 relative overflow-hidden rounded-full">
-                                    <Activity className="absolute right-0 top-1/2 -translate-y-1/2 text-accent h-4 w-4" />
+                    {/* Tab Content */}
+                    <div className="animate-fade-up" style={{ animationDelay: '60ms' }}>
+                        {activeTab === 'patients' ? (
+                            assignedPatients.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-12 bg-bg-surface rounded-[6px] border border-border">
+                                    <Users className="h-8 w-8 text-text-muted mb-4" />
+                                    <h3 className="font-sora text-[24px] font-bold text-text-primary mb-2">
+                                        No assigned patients
+                                    </h3>
+                                    <p className="text-text-muted">
+                                        The hospital admin has not assigned any patients to you yet.
+                                    </p>
                                 </div>
-                                <h3 className="font-sora text-[24px] font-bold text-text-primary mb-2">
-                                    No reports to review
-                                </h3>
-                                <p className="text-text-muted">
-                                    Patients have not shared any reports with you yet.
-                                </p>
-                            </div>
+                            ) : (
+                                <DataTable
+                                    columns={patientColumns}
+                                    rows={assignedPatients}
+                                    getRowKey={(r) => r.patientId}
+                                />
+                            )
                         ) : (
-                            <DataTable
-                                columns={columns}
-                                rows={sortedReports}
-                                getRowKey={(r) => r.id}
-                                getRowVariant={getRowVariant}
-                            />
+                            reports.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center p-12 bg-bg-surface rounded-[6px] border border-border">
+                                    <div className="h-[2px] w-[60px] bg-accent mb-6 relative overflow-hidden rounded-full">
+                                        <Activity className="absolute right-0 top-1/2 -translate-y-1/2 text-accent h-4 w-4" />
+                                    </div>
+                                    <h3 className="font-sora text-[24px] font-bold text-text-primary mb-2">
+                                        No reports to review
+                                    </h3>
+                                    <p className="text-text-muted">
+                                        Patients have not shared any reports with you yet.
+                                    </p>
+                                </div>
+                            ) : (
+                                <DataTable
+                                    columns={reportColumns}
+                                    rows={sortedReports}
+                                    getRowKey={(r) => r.id}
+                                    getRowVariant={getRowVariant}
+                                />
+                            )
                         )}
                     </div>
 
                 </div>
 
-                {/* Modals integrated here */}
+                {/* Modals */}
                 <ReportAnalysisDrawer
                     open={isDrawerOpen}
                     onOpenChange={setIsDrawerOpen}
