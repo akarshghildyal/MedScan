@@ -162,6 +162,8 @@ async def get_shared_report_detail(
     
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+        
+    return ReportDetailOut.from_report(report)
     
 @router.patch("/reports/{report_id}/review", response_model=ReportDetailOut)
 async def review_shared_report(
