@@ -28,11 +28,11 @@ if settings.BACKEND_CORS_ORIGINS:
 # Auth
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 
-# Reports
-app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"])
-
 # Report Sharing (nested under /reports)
 app.include_router(sharing.router, prefix=f"{settings.API_V1_STR}/reports", tags=["sharing"])
+
+# Reports
+app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["reports"])
 
 # Trends
 app.include_router(trends.router, prefix=f"{settings.API_V1_STR}/trends", tags=["trends"])
