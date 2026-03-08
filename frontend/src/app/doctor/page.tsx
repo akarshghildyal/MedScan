@@ -48,6 +48,7 @@ export default function DoctorDashboard() {
 
     const [activeReport, setActiveReport] = useState<DoctorReportRow | null>(null);
     const [activeTrendMarker, setActiveTrendMarker] = useState('');
+    const [fullReportData, setFullReportData] = useState<any>(null);
 
     // Load data
     const loadData = async () => {
@@ -115,9 +116,16 @@ export default function DoctorDashboard() {
         return 'default';
     };
 
-    const openDrawer = (report: DoctorReportRow) => {
+    const openDrawer = async (report: DoctorReportRow) => {
         setActiveReport(report);
+        setFullReportData(null); // Reset
         setIsDrawerOpen(true);
+        try {
+            const data = await fetchApi(`/doctor/report/${report.id}`);
+            setFullReportData(data);
+        } catch (error) {
+            console.error("Failed to fetch full report details", error);
+        }
     };
 
     const handleReview = () => {
@@ -278,6 +286,7 @@ export default function DoctorDashboard() {
                     onOpenChange={setIsDrawerOpen}
                     filename={`${activeReport?.patientName} - ${activeReport?.type}`}
                     type={activeReport?.type || 'Diagnosis'}
+                    report={fullReportData}
                     onTrendClick={(marker) => {
                         setActiveTrendMarker(marker);
                         setIsTrendOpen(true);
