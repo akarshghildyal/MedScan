@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sora, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { DemoIndicator } from "@/components/features/DemoIndicator";
 import "./globals.css";
 
 const sora = Sora({
@@ -55,6 +56,7 @@ export default function RootLayout({
       <body
         className={`${sora.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans bg-bg-base text-text-body antialiased`}
       >
+        <DemoIndicator />
         {children}
       </body>
     </html>

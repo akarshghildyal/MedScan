@@ -13,6 +13,7 @@ import { TrendModal } from '@/components/features/TrendModal';
 import { ThemeToggle } from '@/components/features/ThemeToggle';
 import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useDemoData } from '@/hooks/useDemoData';
 
 interface ReportRow {
     id: string;
@@ -61,6 +62,7 @@ const mockTrendData = [
 
 export default function PatientDashboard() {
     const router = useRouter();
+    const demoData = useDemoData();
     const [reports, setReports] = useState<ReportRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [userName, setUserName] = useState('Patient');
@@ -80,6 +82,12 @@ export default function PatientDashboard() {
 
     // Fetch data
     const loadData = React.useCallback(async (isInitial = false) => {
+        if (demoData) {
+            setReports(demoData.reports);
+            setIsLoading(false);
+            return;
+        }
+
         try {
             if (isInitial) setIsLoading(true);
             const user = await fetchApi('/auth/me');
@@ -110,6 +118,8 @@ export default function PatientDashboard() {
 
     // Auto-polling for processing reports
     React.useEffect(() => {
+        if (demoData) return; // Suppress polling for demo users
+
         const hasProcessing = reports.some(r => r.status === 'PROCESSING');
         if (!hasProcessing) return;
 
@@ -168,9 +178,26 @@ export default function PatientDashboard() {
         return 'default';
     };
 
+    const handleRetry = (row: ReportRow) => {
+        if (demoData) {
+            setReports(prev => prev.map(r => r.id === row.id ? { ...r, status: 'PROCESSING' } : r));
+            setTimeout(() => {
+                setReports(prev => prev.map(r => r.id === row.id ? { ...r, status: 'FAILED' } : r));
+            }, 3000);
+            return;
+        }
+        // Real API retry logic here if it existed
+    };
+
     const openDrawer = async (report: ReportRow) => {
         setActiveReport(report); // Set immediately to open drawer and show title/summary
         setIsDrawerOpen(true);
+
+        if (demoData) {
+            const staticReq = demoData.reports.find((r: any) => r.id === report.id);
+            setActiveReport(prev => prev?.id === report.id ? { ...report, raw: staticReq } : prev);
+            return;
+        }
 
         try {
             const fullReport = await fetchApi(`/reports/${report.id}`);
@@ -233,7 +260,9 @@ export default function PatientDashboard() {
             render: (row) => (
                 <div className="flex items-center gap-2">
                     {row.status === 'FAILED' ? (
-                        <button className="flex items-center gap-2 rounded border border-status-high px-3 py-1 text-[13px] font-medium text-status-high hover:bg-status-high/10 transition-colors">
+                        <button
+                            onClick={() => handleRetry(row)}
+                            className="flex items-center gap-2 rounded border border-status-high px-3 py-1 text-[13px] font-medium text-status-high hover:bg-status-high/10 transition-colors">
                             <RefreshCw className="h-3 w-3" />
                             Retry
                         </button>
@@ -276,7 +305,8 @@ export default function PatientDashboard() {
             <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
                 <div className="flex items-center gap-2">
                     <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
-                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">PATIENT</span>
+                    {demoData && <span className="rounded-[4px] bg-accent/10 border border-accent/20 px-[6px] py-[2px] text-[10px] font-bold tracking-widest text-accent uppercase ml-1">DEMO</span>}
+                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-1">PATIENT</span>
                 </div>
                 <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-text-primary">{userName}</span>
@@ -308,11 +338,14 @@ export default function PatientDashboard() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">
-                        <MetricChip label="Total Reports" value={reports.length} />
+                        <MetricChip label="Total Reports" value={demoData ? demoData.metrics.totalReports : reports.length} />
                         <MetricChip
                             label="Last Upload"
-                            value={reports.length > 0 ? reports[0].dateUploaded : '--'}
+                            value={demoData ? demoData.metrics.lastUpload : (reports.length > 0 ? reports[0].dateUploaded : '--')}
                         />
+                        {demoData && demoData.metrics.abnormalMarkers > 0 && (
+                            <MetricChip label="Abnormal Markers" value={demoData.metrics.abnormalMarkers} variant="warning" />
+                        )}
                     </div>
                 </div>
 
@@ -401,10 +434,12 @@ export default function PatientDashboard() {
                     open={isTrendOpen}
                     onOpenChange={setIsTrendOpen}
                     markerName={activeTrendMarker}
-                    unit="x10^9/L"
-                    data={mockTrendData}
-                    refRangeMin={4.0}
-                    refRangeMax={11.0}
+                    unit={activeReport?.raw?.markers?.find((m: any) => m.name === activeTrendMarker)?.unit || "N/A"}
+                    data={demoData
+                        ? (activeReport?.raw?.markers?.find((m: any) => m.name === activeTrendMarker)?.trend || [])
+                        : mockTrendData}
+                    refRangeMin={activeReport?.raw?.markers?.find((m: any) => m.name === activeTrendMarker)?.ref_min || 0}
+                    refRangeMax={activeReport?.raw?.markers?.find((m: any) => m.name === activeTrendMarker)?.ref_max || 0}
                 />
 
             </main>

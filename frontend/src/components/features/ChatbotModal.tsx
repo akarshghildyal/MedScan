@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { X, TriangleAlert, Send, Activity } from 'lucide-react';
 import { SuggestedQuestionPill } from '@/components/ui/SuggestedQuestionPill';
 import { cn } from '@/lib/utils';
+import { useDemoData } from '@/hooks/useDemoData';
 
 interface Message {
     id: string;
@@ -20,10 +21,24 @@ interface ChatbotModalProps {
 }
 
 export function ChatbotModal({ open, onOpenChange, reportContext }: ChatbotModalProps) {
+    const demoData = useDemoData();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (open && demoData && reportContext && demoData.chatHistory[reportContext]) {
+            setMessages(demoData.chatHistory[reportContext].map((m: any, idx: number) => ({
+                id: `demo-msg-${idx}`,
+                text: m.content,
+                sender: m.role === 'user' ? 'patient' : 'ai',
+                timestamp: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            })));
+        } else if (!open) {
+            setMessages([]);
+        }
+    }, [open, demoData, reportContext]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -52,12 +67,14 @@ export function ChatbotModal({ open, onOpenChange, reportContext }: ChatbotModal
                 ...prev,
                 {
                     id: (Date.now() + 1).toString(),
-                    text: "I've reviewed your report. A high WBC can indicate your body is fighting off an infection or experiencing inflammation. Given your other results, it is likely a mild, acute response, but you should discuss it further with your physician.",
+                    text: demoData
+                        ? "This is a demo session. In a live account, MedScan's AI would analyse your specific report data and provide a detailed, contextualised response to your question. Please consult your doctor for personalised medical advice."
+                        : "I've reviewed your report. A high WBC can indicate your body is fighting off an infection or experiencing inflammation. Given your other results, it is likely a mild, acute response, but you should discuss it further with your physician.",
                     sender: 'ai',
-                    timestamp: 'Just now'
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }
             ]);
-        }, 2000);
+        }, demoData ? 1500 : 2000);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

@@ -8,6 +8,7 @@ import { Code, Terminal } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { ThemeToggle } from '@/components/features/ThemeToggle';
+import { useDemoData } from '@/hooks/useDemoData';
 
 interface DevReportRow {
     id: string;
@@ -41,7 +42,8 @@ const mockReports: DevReportRow[] = [
 ];
 
 export default function DevDashboard() {
-    const [reports] = useState<DevReportRow[]>(mockReports);
+    const demoData = useDemoData();
+    const reports = demoData ? demoData.pipeline : mockReports;
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     // Modal state
@@ -76,7 +78,8 @@ export default function DevDashboard() {
             <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-[#0a0a0a] px-[20px] lg:px-[48px]">
                 <div className="flex items-center gap-2">
                     <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
-                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">DEV</span>
+                    {demoData && <span className="rounded-[4px] bg-accent/10 border border-accent/20 px-[6px] py-[2px] text-[10px] font-bold tracking-widest text-accent uppercase ml-1">DEMO</span>}
+                    <span className="text-[12px] font-mono text-status-low bg-status-low/10 px-2 py-0.5 rounded-full ml-1">DEV</span>
                 </div>
                 <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-text-primary">SysAdmin</span>

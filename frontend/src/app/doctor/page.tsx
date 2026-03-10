@@ -10,6 +10,7 @@ import { TrendModal } from '@/components/features/TrendModal';
 import { ThemeToggle } from '@/components/features/ThemeToggle';
 import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useDemoData } from '@/hooks/useDemoData';
 
 interface DoctorReportRow {
     id: string;
@@ -39,6 +40,8 @@ const mockTrendData = [
 
 export default function DoctorDashboard() {
     const router = useRouter();
+    const demoData = useDemoData();
+    const [userName, setUserName] = useState('Doctor');
     const [reports, setReports] = useState<DoctorReportRow[]>([]);
     const [assignedPatients, setAssignedPatients] = useState<AssignedPatient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -52,6 +55,22 @@ export default function DoctorDashboard() {
 
     // Load data
     const loadData = async () => {
+        try {
+            const token = localStorage.getItem('medscan-token');
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.sub === 'collins@medscan.demo') setUserName('Dr. Sarah Collins');
+                else if (payload.sub === 'patel@medscan.demo') setUserName('Dr. Raj Patel');
+            }
+        } catch (e) { }
+
+        if (demoData) {
+            setReports(demoData.queue || []);
+            setAssignedPatients(demoData.assignedPatients || []);
+            setIsLoading(false);
+            return;
+        }
+
         const token = typeof window !== 'undefined' ? localStorage.getItem('medscan-token') : null;
         if (!token) {
             router.push('/login');
@@ -120,6 +139,11 @@ export default function DoctorDashboard() {
         setActiveReport(report);
         setFullReportData(null); // Reset
         setIsDrawerOpen(true);
+        if (demoData) {
+            const staticReq = demoData.queue.find((r: any) => r.id === report.id)?.report;
+            setFullReportData(staticReq);
+            return;
+        }
         try {
             const data = await fetchApi(`/doctor/report/${report.id}`);
             setFullReportData(data);
@@ -130,6 +154,8 @@ export default function DoctorDashboard() {
 
     const handleReview = () => {
         if (!activeReport) return;
+
+        // Update local queues for both real and demo mock state
         setReports(prev => prev.map(r =>
             r.id === activeReport.id ? { ...r, isReviewed: true } : r
         ));
@@ -183,10 +209,11 @@ export default function DoctorDashboard() {
             <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
                 <div className="flex items-center gap-2">
                     <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
-                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">DOCTOR</span>
+                    {demoData && <span className="rounded-[4px] bg-accent/10 border border-accent/20 px-[6px] py-[2px] text-[10px] font-bold tracking-widest text-accent uppercase ml-1">DEMO</span>}
+                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-1">DOCTOR</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-text-primary">Dr. Smith</span>
+                    <span className="text-sm font-medium text-text-primary">{userName}</span>
                     <ThemeToggle />
                     <button onClick={() => { localStorage.removeItem('medscan-token'); router.push('/login'); }} className="text-sm text-text-muted hover:text-status-high transition-colors">
                         Logout
@@ -210,9 +237,9 @@ export default function DoctorDashboard() {
 
                         <div className="flex flex-wrap items-center gap-4">
                             <MetricChip label="Assigned Patients" value={assignedPatients.length} />
-                            <MetricChip label="Shared Reports" value={reports.length} />
-                            <MetricChip label="Critical" value={criticalCount} variant={criticalCount > 0 ? "danger" : "default"} />
-                            <MetricChip label="Pending Review" value={pendingCount} variant={pendingCount > 0 ? "warning" : "default"} />
+                            <MetricChip label="Shared Reports" value={demoData ? demoData.metrics.totalShared : reports.length} />
+                            <MetricChip label="Critical" value={demoData ? demoData.metrics.criticalReports : criticalCount} variant={(demoData ? demoData.metrics.criticalReports : criticalCount) > 0 ? "danger" : "default"} />
+                            <MetricChip label="Pending Review" value={demoData ? demoData.metrics.pendingReview : pendingCount} variant={(demoData ? demoData.metrics.pendingReview : pendingCount) > 0 ? "warning" : "default"} />
                         </div>
                     </div>
 
@@ -299,10 +326,12 @@ export default function DoctorDashboard() {
                     open={isTrendOpen}
                     onOpenChange={setIsTrendOpen}
                     markerName={activeTrendMarker}
-                    unit="x10^9/L"
-                    data={mockTrendData}
-                    refRangeMin={4.0}
-                    refRangeMax={11.0}
+                    unit={fullReportData?.markers?.find((m: any) => m.name === activeTrendMarker)?.unit || "N/A"}
+                    data={demoData
+                        ? (fullReportData?.markers?.find((m: any) => m.name === activeTrendMarker)?.trend || [])
+                        : mockTrendData}
+                    refRangeMin={fullReportData?.markers?.find((m: any) => m.name === activeTrendMarker)?.ref_min || 0}
+                    refRangeMax={fullReportData?.markers?.find((m: any) => m.name === activeTrendMarker)?.ref_max || 0}
                 />
 
             </main>

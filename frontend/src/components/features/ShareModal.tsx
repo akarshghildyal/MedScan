@@ -5,6 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { X, CheckCircle, Loader2, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { fetchApi } from '@/lib/api';
+import { useDemoData } from '@/hooks/useDemoData';
 
 interface ShareModalProps {
     open: boolean;
@@ -19,6 +20,7 @@ interface DoctorInfo {
 }
 
 export function ShareModal({ open, onOpenChange, reportId }: ShareModalProps) {
+    const demoData = useDemoData();
     const [doctorEmail, setDoctorEmail] = useState('');
     const [isSuccess, setIsSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,19 @@ export function ShareModal({ open, onOpenChange, reportId }: ShareModalProps) {
 
         setIsLooking(true);
         setError(null);
+
+        if (demoData) {
+            setTimeout(() => {
+                setDoctorInfo({
+                    doctor_id: 'demo-doc-id',
+                    doctor_name: 'Dr. Sarah Palmer (Demo)',
+                    doctor_email: email
+                });
+                setIsLooking(false);
+            }, 800);
+            return;
+        }
+
         try {
             const data = await fetchApi(`/reports/doctor-lookup?email=${encodeURIComponent(email)}`);
             setDoctorInfo(data);
@@ -69,6 +84,15 @@ export function ShareModal({ open, onOpenChange, reportId }: ShareModalProps) {
 
         setIsSharing(true);
         setError(null);
+
+        if (demoData) {
+            setTimeout(() => {
+                setIsSuccess(true);
+                setIsSharing(false);
+            }, 1500);
+            return;
+        }
+
         try {
             await fetchApi('/reports/share', {
                 method: 'POST',

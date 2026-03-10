@@ -42,6 +42,27 @@ export default function LoginPage() {
             setIsLoading(true);
             try {
                 if (isLogin) {
+                    // Demo Mode Hardcoded Bypass
+                    const lowerEmail = email.toLowerCase().trim();
+                    if (lowerEmail.endsWith('@medscan.demo') && password === 'Demo@1234') {
+                        // Generate a fake JWT for the frontend to decode
+                        const mockHeader = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+                        const mockPayload = btoa(JSON.stringify({
+                            sub: lowerEmail,
+                            exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
+                        }));
+                        const mockToken = `${mockHeader}.${mockPayload}.fakedsignature`;
+
+                        localStorage.setItem('medscan-token', mockToken);
+
+                        // Route based on mock role
+                        if (lowerEmail.startsWith('admin')) router.push('/admin');
+                        else if (lowerEmail.startsWith('dev')) router.push('/dev');
+                        else if (lowerEmail.startsWith('dr') || lowerEmail === 'collins@medscan.demo' || lowerEmail === 'patel@medscan.demo') router.push('/doctor');
+                        else router.push('/patient');
+                        return;
+                    }
+
                     const params = new URLSearchParams();
                     params.append('username', email);
                     params.append('password', password);
