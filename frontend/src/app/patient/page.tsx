@@ -216,7 +216,7 @@ export default function PatientDashboard() {
         {
             key: 'status',
             header: 'Status',
-            render: (row) => <StatusBadge status={row.status} />,
+            render: (row) => <StatusBadge status={row.status} subMessage={row.status === 'PROCESSING' ? row.raw?.current_step : undefined} />,
         },
         {
             key: 'summaryPreview',
