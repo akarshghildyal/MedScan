@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Activity, Users } from 'lucide-react';
-import { MetricChip } from '@/components/ui/MetricChip';
+import { Activity, Users, AlertTriangle, Clock } from 'lucide-react';
+import { MetricCard } from '@/components/MetricCard';
 import { DataTable, Column, RowVariant } from '@/components/ui/DataTable';
 import { StatusBadge, StatusType } from '@/components/ui/StatusBadge';
 import { ReportAnalysisDrawer } from '@/components/features/ReportAnalysisDrawer';
 import { TrendModal } from '@/components/features/TrendModal';
-import { ThemeToggle } from '@/components/features/ThemeToggle';
+import { DashboardHeader } from '@/components/DashboardHeader';
 import { fetchApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
@@ -39,6 +39,7 @@ const mockTrendData = [
 
 export default function DoctorDashboard() {
     const router = useRouter();
+    const [userName, setUserName] = useState('Doctor');
     const [reports, setReports] = useState<DoctorReportRow[]>([]);
     const [assignedPatients, setAssignedPatients] = useState<AssignedPatient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +61,15 @@ export default function DoctorDashboard() {
 
         try {
             setIsLoading(true);
+
+            // Load current user info for header display
+            try {
+                const user = await fetchApi('/auth/me');
+                setUserName(user.full_name || user.email || 'Doctor');
+            } catch {
+                // ignore
+            }
+
             const [reportsData, patientsData] = await Promise.all([
                 fetchApi('/doctor/reports'),
                 fetchApi('/doctor/patients')
@@ -108,7 +118,6 @@ export default function DoctorDashboard() {
         });
     }, [reports]);
 
-    const criticalCount = reports.filter(r => r.highestSeverity === 'CRITICAL').length;
     const pendingCount = reports.filter(r => !r.isReviewed).length;
 
     const getRowVariant = (row: DoctorReportRow): RowVariant => {
@@ -180,19 +189,7 @@ export default function DoctorDashboard() {
         <div className="min-h-screen bg-bg-base text-text-body flex flex-col">
 
             {/* Top Navigation Bar */}
-            <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
-                <div className="flex items-center gap-2">
-                    <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
-                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">DOCTOR</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-text-primary">Dr. Smith</span>
-                    <ThemeToggle />
-                    <button onClick={() => { localStorage.removeItem('medscan-token'); router.push('/login'); }} className="text-sm text-text-muted hover:text-status-high transition-colors">
-                        Logout
-                    </button>
-                </div>
-            </header>
+            <DashboardHeader roleOverride="Doctor" userName={userName} />
 
             <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px] flex flex-col flex-1">
                 <div className="flex w-full flex-col gap-[32px]">
@@ -208,11 +205,10 @@ export default function DoctorDashboard() {
                             <p className="text-text-muted">Manage assigned patients and review shared reports</p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-4">
-                            <MetricChip label="Assigned Patients" value={assignedPatients.length} />
-                            <MetricChip label="Shared Reports" value={reports.length} />
-                            <MetricChip label="Critical" value={criticalCount} variant={criticalCount > 0 ? "danger" : "default"} />
-                            <MetricChip label="Pending Review" value={pendingCount} variant={pendingCount > 0 ? "warning" : "default"} />
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <MetricCard title="Assigned Patients" value={assignedPatients.length} icon={Users} accent="primary" delay={0.1} />
+                            <MetricCard title="Shared Reports" value={reports.length} icon={Activity} accent="info" delay={0.2} />
+                            <MetricCard title="Pending Review" value={pendingCount} icon={Clock} accent={pendingCount > 0 ? 'warning' : 'success'} delay={0.3} />
                         </div>
                     </div>
 

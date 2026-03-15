@@ -5,6 +5,8 @@ Stores uploaded medical reports and their AI analysis results.
 Aligned with the MedScan API spec and agents spec.
 """
 
+from __future__ import annotations
+
 from typing import Optional, List
 from beanie import Document, Indexed
 from pydantic import BaseModel, Field
@@ -83,11 +85,23 @@ class ReportOut(BaseModel):
     summary: Optional[str] = None
     status: ReportStatus
     current_step: str = "Initializing"
+    markers: List[MarkerOut] = []
 
     model_config = {"from_attributes": True}
 
     @classmethod
     def from_report(cls, report: Report) -> "ReportOut":
+        markers_out = [
+            MarkerOut(
+                name=m.name,
+                value=m.value,
+                reference_min=m.reference_min,
+                reference_max=m.reference_max,
+                status=m.status.value
+            )
+            for m in report.markers
+        ]
+
         return cls(
             report_id=str(report.id),
             file_name=report.file_name,
@@ -96,7 +110,8 @@ class ReportOut(BaseModel):
             upload_date=report.upload_date,
             summary=report.summary,
             status=report.status,
-            current_step=getattr(report, "current_step", "Initializing")
+            current_step=getattr(report, "current_step", "Initializing"),
+            markers=markers_out,
         )
 
 

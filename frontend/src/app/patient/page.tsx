@@ -1,85 +1,55 @@
 'use client';
 
-import React, { useState } from 'react';
-import { RefreshCw, Share2, MessageCircle, Activity } from 'lucide-react';
-import { MetricChip } from '@/components/ui/MetricChip';
-import { UploadStrip } from '@/components/ui/UploadStrip';
-import { DataTable, Column, RowVariant } from '@/components/ui/DataTable';
-import { StatusBadge, StatusType } from '@/components/ui/StatusBadge';
-import { ReportAnalysisDrawer } from '@/components/features/ReportAnalysisDrawer';
-import { ChatbotModal } from '@/components/features/ChatbotModal';
-import { ShareModal } from '@/components/features/ShareModal';
-import { TrendModal } from '@/components/features/TrendModal';
-import { ThemeToggle } from '@/components/features/ThemeToggle';
-import { fetchApi } from '@/lib/api';
+import React, { useState, useCallback, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { RefreshCw, Share2, MessageCircle, FileText, CheckCircle, Clock, AlertTriangle, Upload, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { fetchApi } from '@/lib/api';
+
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { MetricCard } from '@/components/MetricCard';
+import { Badge } from '@/components/ui/badge';
+
+// Modals adapted from the UI Spec
+import { ReportAnalysisDrawer } from '@/components/patient/ReportAnalysisDrawer';
+import { ShareModal } from '@/components/features/ShareModal';
+import { TrendViewerModal } from '@/components/patient/TrendViewerModal';
+import { ChatbotModal } from '@/components/patient/ChatbotModal';
 
 interface ReportRow {
     id: string;
     filename: string;
     type: string;
     dateUploaded: string;
-    status: StatusType;
-    summaryPreview: string;
+    status: 'UPLOADED' | 'PROCESSING' | 'ANALYZED' | 'FAILED';
     currentStep?: string;
+    summaryPreview: string;
     raw?: any;
 }
-
-const mockReports: ReportRow[] = [
-    {
-        id: '1',
-        filename: 'Complete_Blood_Count_Jan2026_Final.pdf',
-        type: 'Blood Test',
-        dateUploaded: '10 mins ago',
-        status: 'ANALYZED',
-        summaryPreview: 'Elevated WBC count detected. All other markers normal.',
-    },
-    {
-        id: '2',
-        filename: 'Liver_Function_Panel_Q4.pdf',
-        type: 'Biochemistry',
-        dateUploaded: '2 hours ago',
-        status: 'PROCESSING',
-        summaryPreview: 'Extracting markers...',
-    },
-    {
-        id: '3',
-        filename: 'Thyroid_Scan_Results_Corrupted.pdf',
-        type: 'Unknown',
-        dateUploaded: '1 day ago',
-        status: 'FAILED',
-        summaryPreview: 'Failed to parse PDF document.',
-    },
-];
-
-const mockTrendData = [
-    { date: 'Jan 2025', value: 8.5, status: 'NORMAL' as StatusType },
-    { date: 'Jun 2025', value: 9.2, status: 'NORMAL' as StatusType },
-    { date: 'Oct 2025', value: 10.1, status: 'NORMAL' as StatusType },
-    { date: 'Jan 2026', value: 11.8, status: 'HIGH' as StatusType },
-];
 
 export default function PatientDashboard() {
     const router = useRouter();
     const [reports, setReports] = useState<ReportRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [userName, setUserName] = useState('Patient');
+
+    // Upload State
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [isDragActive, setIsDragActive] = useState(false);
 
     // Modal States
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [isShareOpen, setIsShareOpen] = useState(false);
-    const [isTrendOpen, setIsTrendOpen] = useState(false);
-
-    // Selected Report for Modals
     const [activeReport, setActiveReport] = useState<ReportRow | null>(null);
-    const [activeTrendMarker, setActiveTrendMarker] = useState('');
+    const [activeReportDetail, setActiveReportDetail] = useState<any>(null);
+    const [isReportLoading, setIsReportLoading] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
+    const [activeTrendMarker, setActiveTrendMarker] = useState<string>('');
+    const [isTrendOpen, setIsTrendOpen] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(false);
 
-    // Fetch data
-    const loadData = React.useCallback(async (isInitial = false) => {
+    // Fetch API Data
+    const loadData = useCallback(async (isInitial = false) => {
         try {
             if (isInitial) setIsLoading(true);
             const user = await fetchApi('/auth/me');
@@ -87,11 +57,12 @@ export default function PatientDashboard() {
 
             const data = await fetchApi('/reports/');
             const mappedReports: ReportRow[] = data.map((r: any) => ({
-                id: r.report_id, // Map report_id to id
+                id: r.report_id,
                 filename: r.file_name || 'Unknown Document',
                 type: r.report_type || 'Unknown',
                 dateUploaded: new Date(r.upload_date).toLocaleDateString(),
-                status: (r.status || 'PROCESSING').toUpperCase() as StatusType,
+                status: (r.status || 'PROCESSING').toUpperCase() as any,
+                currentStep: r.current_step || 'Initializing...',
                 summaryPreview: r.summary || (r.status === 'FAILED' ? 'Failed to process document' : r.status === 'PROCESSING' ? `Running: ${r.current_step || 'Initializing...'}` : 'No summary available'),
                 raw: r
             }));
@@ -104,12 +75,12 @@ export default function PatientDashboard() {
         }
     }, [router]);
 
-    React.useEffect(() => {
+    useEffect(() => {
         loadData(true);
     }, [loadData]);
 
-    // Auto-polling for processing reports
-    React.useEffect(() => {
+    // Polling exclusively for processing reports
+    useEffect(() => {
         const hasProcessing = reports.some(r => r.status === 'PROCESSING');
         if (!hasProcessing) return;
 
@@ -121,7 +92,6 @@ export default function PatientDashboard() {
     }, [reports, loadData]);
 
     const handleFileUpload = async (file: File) => {
-        setSelectedFile(file);
         setIsUploading(true);
         setUploadProgress(20);
 
@@ -143,271 +113,294 @@ export default function PatientDashboard() {
                     filename: result.file_name || file.name,
                     type: result.report_type || 'Pending',
                     dateUploaded: 'Just now',
-                    status: (result.status || 'PROCESSING').toUpperCase() as StatusType,
+                    status: (result.status || 'PROCESSING').toUpperCase() as any,
+                    currentStep: result.current_step || 'Initializing...',
                     summaryPreview: `Running: ${result.current_step || 'Initializing...'}`,
                     raw: result
                 };
                 setReports([newRow, ...reports]);
                 setIsUploading(false);
-                setSelectedFile(null);
+                setUploadProgress(0);
             }, 600);
 
         } catch (error: any) {
             console.error('Upload failed:', error);
             setIsUploading(false);
             setUploadProgress(0);
-            setSelectedFile(null);
             alert('Upload failed: ' + (error.message || 'Error uploading file'));
         }
     };
 
-    const getRowVariant = (row: ReportRow): RowVariant => {
-        if (row.status === 'ANALYZED') return 'success';
-        if (row.status === 'FAILED') return 'error';
-        if (row.status === 'PROCESSING') return 'processing';
-        return 'default';
-    };
-
-    const openDrawer = async (report: ReportRow) => {
-        setActiveReport(report); // Set immediately to open drawer and show title/summary
+    const openReport = async (row: ReportRow) => {
+        setActiveReport(row);
         setIsDrawerOpen(true);
+        setActiveReportDetail(null);
+        setIsReportLoading(true);
 
         try {
-            const fullReport = await fetchApi(`/reports/${report.id}`);
-            setActiveReport(prev => prev?.id === report.id ? { ...report, raw: fullReport } : prev);
+            const detail = await fetchApi(`/reports/${row.id}`);
+            setActiveReportDetail(detail);
         } catch (error) {
-            console.error('Failed to fetch full report details:', error);
+            console.error('Failed to load report details', error);
+        } finally {
+            setIsReportLoading(false);
         }
     };
 
-    const openShare = (report: ReportRow) => {
-        setActiveReport(report);
-        setIsShareOpen(true);
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragActive(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFileUpload(e.dataTransfer.files[0]);
+        }
     };
 
-    const openChat = (report: ReportRow) => {
-        setActiveReport(report);
-        setIsChatOpen(true);
-    };
+    // Calculate metrics
+    const analyzedCount = reports.filter(r => r.status === 'ANALYZED').length;
+    const processingCount = reports.filter(r => r.status === 'PROCESSING').length;
 
-    const columns: Column<ReportRow>[] = [
-        {
-            key: 'filename',
-            header: 'Filename',
-            render: (row) => {
-                const fname = row.filename || 'Unknown Document';
-                return (
-                    <span className="truncate block max-w-[200px]" title={fname}>
-                        {fname.length > 32 ? fname.substring(0, 29) + '...' : fname}
-                    </span>
-                );
-            },
-        },
-        {
-            key: 'type',
-            header: 'Type',
-            render: (row) => (
-                <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-text-body">
-                    {row.type}
-                </span>
-            ),
-        },
-        { key: 'dateUploaded', header: 'Date Uploaded' },
-        {
-            key: 'status',
-            header: 'Status',
-            render: (row) => <StatusBadge status={row.status} subMessage={row.status === 'PROCESSING' ? row.raw?.current_step : undefined} />,
-        },
-        {
-            key: 'summaryPreview',
-            header: 'Summary Preview',
-            render: (row) => (
-                <span className="italic text-[13px] text-text-muted truncate block max-w-[250px]">
-                    {row.summaryPreview}
-                </span>
-            ),
-        },
-        {
-            key: 'actions',
-            header: 'Actions',
-            render: (row) => (
-                <div className="flex items-center gap-2">
-                    {row.status === 'FAILED' ? (
-                        <button className="flex items-center gap-2 rounded border border-status-high px-3 py-1 text-[13px] font-medium text-status-high hover:bg-status-high/10 transition-colors">
-                            <RefreshCw className="h-3 w-3" />
-                            Retry
-                        </button>
-                    ) : (
-                        <>
-                            <button
-                                onClick={() => openDrawer(row)}
-                                className="bg-accent text-bg-base hover:brightness-110 px-3 py-1.5 rounded-[4px] text-[13px] font-bold transition-all disabled:opacity-50"
-                                disabled={row.status === 'PROCESSING'}
-                            >
-                                View
-                            </button>
-                            <button
-                                onClick={() => openShare(row)}
-                                className="text-text-muted hover:text-text-primary px-2 transition-colors disabled:opacity-50"
-                                disabled={row.status === 'PROCESSING'}
-                                title="Share"
-                            >
-                                <Share2 className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => openChat(row)}
-                                className="text-text-muted hover:text-text-primary px-2 transition-colors disabled:opacity-50"
-                                disabled={row.status === 'PROCESSING'}
-                                title="Chat"
-                            >
-                                <MessageCircle className="h-4 w-4" />
-                            </button>
-                        </>
-                    )}
-                </div>
-            ),
-        },
-    ];
+    const trendMarkers = React.useMemo(() => {
+        const set = new Set<string>();
+        reports.forEach((r) => {
+            r.raw?.markers?.forEach((m: any) => {
+                if (m?.name) set.add(m.name);
+            });
+        });
+        return Array.from(set);
+    }, [reports]);
 
     return (
-        <div className="flex min-h-screen w-full flex-col bg-bg-base">
+        <div className="min-h-screen bg-bg-base text-text-body flex flex-col">
+            <DashboardHeader userName={userName} roleOverride="Patient" />
 
-            {/* Top Navigation Bar */}
-            <header className="dashboard-nav sticky top-0 z-30 flex h-[64px] w-full items-center justify-between border-b border-border bg-bg-surface px-[20px] lg:px-[48px]">
-                <div className="flex items-center gap-2">
-                    <span className="font-sora text-[20px] font-bold text-text-primary tracking-tight">MedScan</span>
-                    <span className="text-[12px] font-mono text-accent bg-accent/10 px-2 py-0.5 rounded-full ml-2">PATIENT</span>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-text-primary">{userName}</span>
-                    <ThemeToggle />
-                    <button
-                        onClick={() => { localStorage.removeItem('medscan-token'); router.push('/login'); }}
-                        className="text-sm text-text-muted hover:text-status-high transition-colors"
+            <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px] flex flex-col flex-1">
+                <div className="flex w-full flex-col gap-[32px]">
+
+                    {/* Header Row */}
+                    <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 animate-fade-up">
+                        <div>
+                            <div className="flex items-center gap-4 mb-1">
+                                <h1 className="font-sora text-[28px] font-bold text-text-primary">
+                                    Patient Dashboard
+                                </h1>
+                            </div>
+                            <p className="text-text-muted">View your medical reports and insights</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <MetricCard title="Total Reports" value={reports.length} icon={FileText} accent="primary" delay={0.1} />
+                            <MetricCard title="Analyzed" value={analyzedCount} icon={CheckCircle} accent="success" delay={0.2} />
+                            <MetricCard title="Processing" value={processingCount} icon={Clock} accent="info" delay={0.3} />
+                        </div>
+                    </div>
+
+                    {/* Upload + Trend Row */}
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    {/* Upload Zone */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                        className="lg:col-span-2"
                     >
-                        Logout
-                    </button>
-                </div>
-            </header>
-
-            <main className="mx-auto w-full max-w-[1280px] px-[20px] lg:px-[48px] py-[48px] flex flex-col gap-[32px] flex-1">
-                {/* Header Row */}
-                <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 animate-fade-up">
-                    <div>
-                        <div className="flex items-center gap-4 mb-2">
-                            <h1 className="font-sora text-[28px] font-bold text-text-primary">
-                                Welcome back, {userName}
-                            </h1>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="text-text-muted hover:text-accent transition-colors p-2 rounded-full focus:ring-accent focus:outline-none focus:ring-2"
-                            >
-                                <RefreshCw className="h-5 w-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4">
-                        <MetricChip label="Total Reports" value={reports.length} />
-                        <MetricChip
-                            label="Last Upload"
-                            value={reports.length > 0 ? reports[0].dateUploaded : '--'}
-                        />
-                    </div>
-                </div>
-
-                {/* Upload Strip */}
-                <div className="animate-fade-up" style={{ animationDelay: '60ms' }}>
-                    <UploadStrip
-                        onFileSelect={handleFileUpload}
-                        onClear={() => setSelectedFile(null)}
-                        state={isUploading ? 'uploading' : selectedFile ? 'success' : 'idle'}
-                        progress={uploadProgress}
-                        selectedFile={selectedFile}
-                    />
-                </div>
-
-                {/* History Table */}
-                <div className="animate-fade-up flex flex-col gap-4" style={{ animationDelay: '120ms' }}>
-                    <h2 className="font-sora text-[20px] font-bold text-text-primary mt-4">
-                        Report History
-                    </h2>
-
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center p-12 bg-bg-surface rounded-[6px] border border-border">
-                            <div className="animate-pulse h-[2px] w-[60px] bg-accent mb-6 rounded-full relative overflow-hidden">
-                                <div className="absolute inset-0 bg-white/50 w-full animate-[shimmer_1s_infinite]"></div>
+                        <div
+                            onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                            onDragLeave={() => setIsDragActive(false)}
+                            onDrop={handleDrop}
+                            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors ${isDragActive ? 'border-primary bg-primary/5' : 'border-border bg-bg-surface hover:bg-bg-elevated'
+                                }`}
+                        >
+                            <input
+                                type="file"
+                                id="file-upload"
+                                className="hidden"
+                                accept="application/pdf"
+                                onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+                            />
+                            <div className="mb-4 rounded-full bg-primary/10 p-4">
+                                <Upload className="text-primary" size={36} />
                             </div>
-                            <h3 className="font-sora text-text-primary mb-2">Loading reports...</h3>
+                            <h3 className="mb-1 text-lg font-semibold text-text-primary">Upload Pathology Report</h3>
+                            <p className="mb-4 text-sm text-text-muted">Drag and drop your PDF here, or click to browse</p>
+
+                            {isUploading ? (
+                                <div className="w-full max-w-xs space-y-2">
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                                        <div
+                                            className="h-full bg-primary transition-all duration-300"
+                                            style={{ width: `${uploadProgress}%` }}
+                                        />
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">{uploadProgress}% processing...</div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => document.getElementById('file-upload')?.click()}
+                                    className="rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+                                >
+                                    Select File
+                                </button>
+                            )}
                         </div>
-                    ) : reports.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-12 bg-bg-surface rounded-[6px] border border-border">
-                            <div className="h-[2px] w-[60px] bg-accent mb-6 relative overflow-hidden rounded-full">
-                                <Activity className="absolute right-0 top-1/2 -translate-y-1/2 text-accent h-4 w-4" />
-                            </div>
-                            <h3 className="font-sora text-[24px] font-bold text-text-primary mb-2">
-                                No reports yet
-                            </h3>
-                            <p className="text-text-muted mb-8">
-                                Upload your first pathology PDF to get started
-                            </p>
-                            <button
-                                onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
-                                className="bg-accent text-bg-base hover:brightness-110 px-6 py-2 rounded-[4px] font-bold transition-all"
-                            >
-                                Upload PDF
-                            </button>
+                    </motion.div>
+
+                    {/* Trend Card */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+                        className="flex flex-col items-center justify-center rounded-xl border border-border bg-bg-surface p-6 text-center shadow-soft"
+                    >
+                        <div className="mb-4 rounded-full bg-primary/10 p-4">
+                            <RefreshCw className="text-primary" size={32} />
                         </div>
-                    ) : (
-                        <DataTable
-                            columns={columns}
-                            rows={reports}
-                            getRowKey={(r) => r.id}
-                            getRowVariant={getRowVariant}
-                        />
-                    )}
+                        <h3 className="mb-2 text-lg font-semibold text-text-primary">Biomarker Trends</h3>
+                        <p className="mb-6 text-sm text-text-muted">Track how your health markers change over time.</p>
+                        <button
+                            onClick={() => setIsTrendOpen(true)}
+                            className="rounded-md border border-border bg-bg-base text-text-primary hover:bg-bg-elevated px-6 py-2.5 text-sm font-medium shadow-sm transition-colors"
+                        >
+                            View Trends
+                        </button>
+                    </motion.div>
                 </div>
 
-                {/* Modals integrated here */}
-                <ReportAnalysisDrawer
-                    open={isDrawerOpen}
-                    onOpenChange={setIsDrawerOpen}
-                    filename={activeReport?.filename || 'Report Analysis'}
-                    type={activeReport?.type || 'Diagnosis'}
-                    report={activeReport?.raw}
-                    onShareClick={() => {
-                        setIsDrawerOpen(false);
-                        setIsShareOpen(true);
-                    }}
-                    onTrendClick={(marker) => {
-                        setActiveTrendMarker(marker);
-                        setIsTrendOpen(true);
-                    }}
-                />
+                    {/* Reports Table */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.7 }}
+                        className="rounded-[6px] border border-border bg-bg-surface shadow-soft overflow-hidden"
+                    >
+                        <div className="border-b border-border px-5 py-4">
+                            <h2 className="text-lg font-semibold text-text-primary">Report History</h2>
+                        </div>
 
-                <ChatbotModal
-                    open={isChatOpen}
-                    onOpenChange={setIsChatOpen}
-                    reportContext={activeReport?.id}
-                />
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-bg-elevated">
+                                    <tr>
+                                        <th className="px-5 py-3 text-[10px] font-medium tracking-[0.08em] uppercase text-text-muted border-b border-border">Filename</th>
+                                        <th className="px-5 py-3 text-[10px] font-medium tracking-[0.08em] uppercase text-text-muted border-b border-border">Type</th>
+                                        <th className="px-5 py-3 text-[10px] font-medium tracking-[0.08em] uppercase text-text-muted border-b border-border">Date Uploaded</th>
+                                        <th className="px-5 py-3 text-[10px] font-medium tracking-[0.08em] uppercase text-text-muted border-b border-border">Status</th>
+                                        <th className="px-5 py-3 text-[10px] font-medium tracking-[0.08em] uppercase text-text-muted border-b border-border">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {reports.length === 0 && !isLoading ? (
+                                        <tr>
+                                            <td colSpan={5} className="py-8 text-center text-text-muted">
+                                                No reports found. Upload a document to begin.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        reports.map((row, i) => (
+                                            <motion.tr
+                                                key={row.id}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                transition={{ delay: 0.05 * i }}
+                                                className="border-b border-border last:border-0 hover:bg-white/[0.02] transition-colors"
+                                            >
+                                                <td className="px-5 py-3">
+                                                    <span className="font-medium text-text-primary">{row.filename}</span>
+                                                    <p className="mt-1 text-xs text-text-muted italic truncate max-w-sm">
+                                                        {row.summaryPreview}
+                                                    </p>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-text-body">{row.type}</span>
+                                                </td>
+                                                <td className="px-5 py-3 text-text-muted">{row.dateUploaded}</td>
+                                                <td className="px-5 py-3 whitespace-nowrap">
+                                                    {row.status === 'UPLOADED' && <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-text-body">Uploaded</span>}
+                                                    {row.status === 'PROCESSING' && <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-text-body">{row.currentStep || 'Processing'}</span>}
+                                                    {row.status === 'ANALYZED' && <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-text-body">Analyzed</span>}
+                                                    {row.status === 'FAILED' && <span className="inline-flex items-center rounded-md bg-bg-elevated border border-border px-2 py-1 text-[11px] font-medium text-destructive">Failed</span>}
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        {row.status === 'FAILED' ? (
+                                                            <button className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors">
+                                                                <RefreshCw size={14} /> Retry
+                                                            </button>
+                                                        ) : row.status === 'ANALYZED' ? (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => openReport(row)}
+                                                                    className="flex items-center justify-center h-8 w-8 rounded-md text-text-muted hover:bg-bg-elevated hover:text-text-primary transition-all"
+                                                                    title="View Analysis"
+                                                                >
+                                                                    <Eye size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActiveReport(row);
+                                                                        setIsShareOpen(true);
+                                                                    }}
+                                                                    className="flex items-center justify-center h-8 w-8 rounded-md text-text-muted hover:bg-bg-elevated hover:text-text-primary transition-all"
+                                                                    title="Share Doctor"
+                                                                >
+                                                                    <Share2 size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setActiveReport(row);
+                                                                        setIsChatOpen(true);
+                                                                    }}
+                                                                    className="flex items-center justify-center h-8 w-8 rounded-md text-text-muted hover:bg-bg-elevated hover:text-text-primary transition-all"
+                                                                    title="Ask AI"
+                                                                >
+                                                                    <MessageCircle size={16} />
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs text-text-muted">Please wait...</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </motion.div>
 
-                <ShareModal
-                    open={isShareOpen}
-                    onOpenChange={setIsShareOpen}
-                    reportId={activeReport?.id}
-                />
-
-                <TrendModal
-                    open={isTrendOpen}
-                    onOpenChange={setIsTrendOpen}
-                    markerName={activeTrendMarker}
-                    unit="x10^9/L"
-                    data={mockTrendData}
-                    refRangeMin={4.0}
-                    refRangeMax={11.0}
-                />
-
+                </div>
             </main>
+
+            {/* Modals integrated explicitly mapping to UI components */}
+            <ReportAnalysisDrawer
+                open={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                report={activeReportDetail ?? (activeReport ? {
+                    summary: activeReport.summaryPreview,
+                    insights: activeReport.raw?.insights || [],
+                    detailed_analysis: activeReport.raw?.detailed_analysis || '',
+                    markers: activeReport.raw?.markers || []
+                } : null)}
+                onTrendClick={(markerName: string) => {
+                    setActiveTrendMarker(markerName);
+                    setIsTrendOpen(true);
+                }}
+            />
+
+            <ShareModal
+                open={isShareOpen}
+                onOpenChange={setIsShareOpen}
+                reportId={activeReport?.id}
+            />
+
+            <TrendViewerModal
+                open={isTrendOpen}
+                onClose={() => setIsTrendOpen(false)}
+                markerName={activeTrendMarker}
+                markers={trendMarkers}
+            />
+
+            <ChatbotModal
+                open={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                reportId={activeReport?.id ?? null}
+                filename={activeReport?.filename || ''}
+            />
+
         </div>
     );
 }
