@@ -27,7 +27,17 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'API request failed');
+        let errorMessage = 'API request failed';
+        if (errorData.detail) {
+            if (typeof errorData.detail === 'string') {
+                errorMessage = errorData.detail;
+            } else if (Array.isArray(errorData.detail)) {
+                errorMessage = errorData.detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
+            } else {
+                errorMessage = JSON.stringify(errorData.detail);
+            }
+        }
+        throw new Error(errorMessage);
     }
 
     return response.json();

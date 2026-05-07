@@ -15,7 +15,7 @@ export function DashboardHeader({ roleOverride, userName }: DashboardHeaderProps
 
     const handleLogout = () => {
         localStorage.removeItem('medscan-token');
-        router.push('/login');
+        window.location.href = '/login';
     };
 
     const toggleTheme = () => {

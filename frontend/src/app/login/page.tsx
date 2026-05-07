@@ -106,8 +106,8 @@ export default function Login() {
                                 type="button"
                                 onClick={() => setRole(r)}
                                 className={`rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${role === r
-                                        ? 'bg-background text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:bg-muted/80'
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:bg-muted/80'
                                     }`}
                             >
                                 {r}
@@ -172,7 +172,7 @@ export default function Login() {
                         </button>
                     </form>
 
-                    {role === 'Patient' && (
+                    {role !== 'Dev' && (
                         <div className="text-center text-sm">
                             <span className="text-muted-foreground">Don't have an account? </span>
                             <button
@@ -181,15 +181,14 @@ export default function Login() {
                                     setIsLoading(true);
                                     setError(null);
                                     try {
+                                        const bodyData: any = {
+                                            email,
+                                            password,
+                                            role: role === 'Admin' ? 'hospital' : role.toLowerCase()
+                                        };
                                         await fetchApi('/auth/register', {
                                             method: 'POST',
-                                            body: JSON.stringify({
-                                                email,
-                                                password,
-                                                full_name: '',
-                                                dob: '',
-                                                sex: 'male'
-                                            })
+                                            body: JSON.stringify(bodyData)
                                         });
                                         await handleSubmit(new Event('submit') as unknown as React.FormEvent);
                                     } catch (err: any) {

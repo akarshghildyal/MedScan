@@ -48,12 +48,17 @@ export default function PatientDashboard() {
     const [isTrendOpen, setIsTrendOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
 
+    // Polling Reference to avoid dependency loops
+    const pollTimeoutRef = React.useRef<NodeJS.Timeout>();
+
     // Fetch API Data
     const loadData = useCallback(async (isInitial = false) => {
         try {
-            if (isInitial) setIsLoading(true);
-            const user = await fetchApi('/auth/me');
-            setUserName(user.full_name?.split(' ')[0] || user.full_name || 'Patient');
+            if (isInitial) {
+                setIsLoading(true);
+                const user = await fetchApi('/auth/me');
+                setUserName(user.full_name?.split(' ')[0] || user.full_name || 'Patient');
+            }
 
             const data = await fetchApi('/reports/');
             const mappedReports: ReportRow[] = data.map((r: any) => ({
@@ -67,6 +72,16 @@ export default function PatientDashboard() {
                 raw: r
             }));
             setReports(mappedReports);
+
+            // Chain the next poll if there are still processing reports
+            const stillProcessing = mappedReports.some(r => r.status === 'PROCESSING');
+            if (stillProcessing) {
+                if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+                pollTimeoutRef.current = setTimeout(() => {
+                    loadData(false);
+                }, 4000); // 4 second intervals
+            }
+
         } catch (error) {
             console.error('Error fetching data:', error);
             router.push('/login');
@@ -79,17 +94,12 @@ export default function PatientDashboard() {
         loadData(true);
     }, [loadData]);
 
-    // Polling exclusively for processing reports
     useEffect(() => {
-        const hasProcessing = reports.some(r => r.status === 'PROCESSING');
-        if (!hasProcessing) return;
-
-        const interval = setInterval(() => {
-            loadData(false);
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [reports, loadData]);
+        // Clean up timeout on unmount
+        return () => {
+            if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+        };
+    }, []);
 
     const handleFileUpload = async (file: File) => {
         setIsUploading(true);
@@ -118,7 +128,10 @@ export default function PatientDashboard() {
                     summaryPreview: `Running: ${result.current_step || 'Initializing...'}`,
                     raw: result
                 };
-                setReports([newRow, ...reports]);
+                setReports(prev => [newRow, ...prev]);
+                // Kick off polling explicitly now that we have a PROCESSING row
+                if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+                pollTimeoutRef.current = setTimeout(() => loadData(false), 4000);
                 setIsUploading(false);
                 setUploadProgress(0);
             }, 600);
@@ -196,70 +209,70 @@ export default function PatientDashboard() {
 
                     {/* Upload + Trend Row */}
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                    {/* Upload Zone */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                        className="lg:col-span-2"
-                    >
-                        <div
-                            onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
-                            onDragLeave={() => setIsDragActive(false)}
-                            onDrop={handleDrop}
-                            className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors ${isDragActive ? 'border-primary bg-primary/5' : 'border-border bg-bg-surface hover:bg-bg-elevated'
-                                }`}
+                        {/* Upload Zone */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                            className="lg:col-span-2"
                         >
-                            <input
-                                type="file"
-                                id="file-upload"
-                                className="hidden"
-                                accept="application/pdf"
-                                onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
-                            />
-                            <div className="mb-4 rounded-full bg-primary/10 p-4">
-                                <Upload className="text-primary" size={36} />
-                            </div>
-                            <h3 className="mb-1 text-lg font-semibold text-text-primary">Upload Pathology Report</h3>
-                            <p className="mb-4 text-sm text-text-muted">Drag and drop your PDF here, or click to browse</p>
-
-                            {isUploading ? (
-                                <div className="w-full max-w-xs space-y-2">
-                                    <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                                        <div
-                                            className="h-full bg-primary transition-all duration-300"
-                                            style={{ width: `${uploadProgress}%` }}
-                                        />
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">{uploadProgress}% processing...</div>
+                            <div
+                                onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
+                                onDragLeave={() => setIsDragActive(false)}
+                                onDrop={handleDrop}
+                                className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors ${isDragActive ? 'border-primary bg-primary/5' : 'border-border bg-bg-surface hover:bg-bg-elevated'
+                                    }`}
+                            >
+                                <input
+                                    type="file"
+                                    id="file-upload"
+                                    className="hidden"
+                                    accept="application/pdf"
+                                    onChange={(e) => e.target.files && handleFileUpload(e.target.files[0])}
+                                />
+                                <div className="mb-4 rounded-full bg-primary/10 p-4">
+                                    <Upload className="text-primary" size={36} />
                                 </div>
-                            ) : (
-                                <button
-                                    onClick={() => document.getElementById('file-upload')?.click()}
-                                    className="rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-                                >
-                                    Select File
-                                </button>
-                            )}
-                        </div>
-                    </motion.div>
+                                <h3 className="mb-1 text-lg font-semibold text-text-primary">Upload Pathology Report</h3>
+                                <p className="mb-4 text-sm text-text-muted">Drag and drop your PDF here, or click to browse</p>
 
-                    {/* Trend Card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-                        className="flex flex-col items-center justify-center rounded-xl border border-border bg-bg-surface p-6 text-center shadow-soft"
-                    >
-                        <div className="mb-4 rounded-full bg-primary/10 p-4">
-                            <RefreshCw className="text-primary" size={32} />
-                        </div>
-                        <h3 className="mb-2 text-lg font-semibold text-text-primary">Biomarker Trends</h3>
-                        <p className="mb-6 text-sm text-text-muted">Track how your health markers change over time.</p>
-                        <button
-                            onClick={() => setIsTrendOpen(true)}
-                            className="rounded-md border border-border bg-bg-base text-text-primary hover:bg-bg-elevated px-6 py-2.5 text-sm font-medium shadow-sm transition-colors"
+                                {isUploading ? (
+                                    <div className="w-full max-w-xs space-y-2">
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                                            <div
+                                                className="h-full bg-primary transition-all duration-300"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">{uploadProgress}% processing...</div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => document.getElementById('file-upload')?.click()}
+                                        className="rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+                                    >
+                                        Select File
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+
+                        {/* Trend Card */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+                            className="flex flex-col items-center justify-center rounded-xl border border-border bg-bg-surface p-6 text-center shadow-soft"
                         >
-                            View Trends
-                        </button>
-                    </motion.div>
-                </div>
+                            <div className="mb-4 rounded-full bg-primary/10 p-4">
+                                <RefreshCw className="text-primary" size={32} />
+                            </div>
+                            <h3 className="mb-2 text-lg font-semibold text-text-primary">Biomarker Trends</h3>
+                            <p className="mb-6 text-sm text-text-muted">Track how your health markers change over time.</p>
+                            <button
+                                onClick={() => setIsTrendOpen(true)}
+                                className="rounded-md border border-border bg-bg-base text-text-primary hover:bg-bg-elevated px-6 py-2.5 text-sm font-medium shadow-sm transition-colors"
+                            >
+                                View Trends
+                            </button>
+                        </motion.div>
+                    </div>
 
                     {/* Reports Table */}
                     <motion.div
@@ -355,12 +368,12 @@ export default function PatientDashboard() {
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </motion.div>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
 
                 </div>
             </main>
