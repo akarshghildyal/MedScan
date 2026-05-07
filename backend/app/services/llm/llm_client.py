@@ -155,8 +155,11 @@ class LLMClient:
         Returns:
             Parsed JSON as dict
         """
+        if not content:
+            return {}
+            
         # Remove markdown code blocks if present
-        content = content.strip()
+        content = str(content).strip()
         if content.startswith("```json"):
             content = content[7:]
         elif content.startswith("```"):

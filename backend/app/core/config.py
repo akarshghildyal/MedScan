@@ -23,9 +23,9 @@ class Settings(BaseSettings):
     OPENROUTER_BASE_URL: str = "https://openrouter.ai/api/v1"
     
     # Model configurations per agent (uses your API key credits)
-    LLM_MODEL_VISION: str = "arcee-ai/trinity-large-preview:free"  # For vision tasks
-    LLM_MODEL_REASONING: str = "arcee-ai/trinity-large-preview:free"  # For Data Extractor, Explanation
-    LLM_MODEL_FAST: str = "arcee-ai/trinity-large-preview:free"  # For Classifier, Insights, Summary
+    LLM_MODEL_VISION: str = "inclusionai/ling-2.6-1t:free"  # For vision tasks
+    LLM_MODEL_REASONING: str = "inclusionai/ling-2.6-1t:free"  # For Data Extractor, Explanation
+    LLM_MODEL_FAST: str = "inclusionai/ling-2.6-1t:free"  # For Classifier, Insights, Summary
 
     model_config = {
         "env_file": ".env",
